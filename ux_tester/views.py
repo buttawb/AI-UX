@@ -6,12 +6,12 @@ from django.views.decorators.csrf import csrf_exempt
 import re
 
 # Hardcoded Figma file ID
-FIGMA_FILE_ID = 'yS1jm9l3wX3ie4RwAJA01V'
+FIGMA_FILE_ID = '1J2MSZzASUTEKNrrQm5o8b'
 FIGMA_ACCESS_TOKEN = 'figd_8KqZh4idtJM7bfuJ8AXSoTAGyJ_n42hLZwgNVUx8'
 RAMSHA_FIGMA_ACCESS_TOKEN = 'figd_3bgofXhJbrbVRuPxlaXmrH-AwL6RTdr9hW1PLydz'
 OPENAI_API_KEY = "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"
 TEMP_TOKEN = "328267-66c5803b-80d4-4989-ad6f-8430d60fb714"
-FIGMA_NODE_ID = '2204:2822';
+FIGMA_NODE_ID = '0:1';
 
 
 @csrf_exempt
