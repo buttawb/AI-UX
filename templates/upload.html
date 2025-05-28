@@ -34,67 +34,119 @@
     <button id="submitBtn">Submit for Analysis</button>
 
     <!-- Display Heatmap -->
-    <div id="heatmapContainer"></div>
+    <h2>Analyzing design: <span id="designName">ShopUnion</span></h2>
+
+    <div style="display:flex; gap: 20px;">
+      <!-- Left: Design + Heatmap container -->
+      <div id="heatmapContainer" style="position: relative; width: 600px; height: 600px; border: 1px solid #ccc;">
+        <img id="figmaImage" src="" alt="Figma Design" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 0;">
+        <div id="heatmapLayer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;"></div>
+      </div>
+    
+      <!-- Right: UX Report -->
+      <div id="uxReport" style="width: 400px; max-height: 600px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; font-family: monospace; white-space: pre-wrap;"></div>
+    </div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/heatmap.js/2.0.2/heatmap.min.js"></script>
 
     <script>
-      $(document).ready(function () {
-        // Handle the Submit button click event
-        $("#submitBtn").click(function () {
-          // Since we're hardcoding the Figma file ID, we don't need file selection anymore
-          const file_id = "4xy1xC6HKD3gGbNNB4SiI5"; // Hardcoded Figma file ID
-
-          // Fetch the Figma file data using the hardcoded file ID
-          $.ajax({
-            url: "/ux/fetch_figma_file/",
-            type: "POST",
-            data: { file_id: file_id },
-            success: function (response) {
-              const figmaData = response.document;
-
-              // Send only Figma data for AI processing
-              $.ajax({
-                url: "/ux/generate_heatmap/",
-                type: "POST",
-                contentType: "application/json",
-                data: JSON.stringify({
-                  figma_data: figmaData,
-                }),
-                success: function (response) {
-                  const heatmapDataRaw = response.heatmap_data;
-
-                  // Convert incoming heatmap data from {x, y, intensity} to {x, y, value}
-                  const heatmapData = heatmapDataRaw.map((point) => ({
-                    x: point.x,
-                    y: point.y,
-                    value: point.intensity || 1,
-                  }));
-
-                  renderHeatmap(heatmapData);
-                },
-              });
-            },
-          });
+      const FIGMA_FILE_ID = 'yS1jm9l3wX3ie4RwAJA01V'; // your file ID
+      
+      // Step 1: Fetch image URL from backend and set it
+      function loadDesignImage() {
+        return $.ajax({
+          url: '/ux/fetch_figma_image_url/',
+          type: 'GET',
+        }).then(response => {
+          if (response.image_url) {
+            $('#figmaImage').attr('src', response.image_url);
+          }
         });
+      }
+      
+      // Step 2: Fetch design JSON (or skip if you already have it), send to AI, get heatmap + report
+      function analyzeDesignWithAI(figmaData) {
+        return $.ajax({
+          url: '/ux/generate_heatmap/',
+          type: 'POST',
+          contentType: 'application/json',
+          data: JSON.stringify({ figma_data: figmaData }),
+        });
+      }
+      
+      // Step 3: Render heatmap on overlay div
+      function renderHeatmap(data) {
+        if (!data || !Array.isArray(data)) {
+          console.error('Invalid heatmap data received:', data);
+          return;
+        }
 
-        // Render the heatmap using Heatmap.js
-        function renderHeatmap(data) {
-          const container = document.getElementById("heatmapContainer");
-
-          heatmapInstance = h337.create({
-            container: container,
-            radius: 40,
-            maxOpacity: 0.6,
-            minOpacity: 0,
-            blur: 0.75,
+        const container = document.getElementById('heatmapLayer');
+        if (window.heatmapInstance) {
+          window.heatmapInstance.setData({ max: 0, data: [] });
+          container.innerHTML = '';
+        }
+        window.heatmapInstance = h337.create({
+          container: container,
+          radius: 40,
+          maxOpacity: 0.6,
+          minOpacity: 0,
+          blur: 0.75,
+        });
+      
+        // heatmap.js expects 'value' key instead of 'intensity'
+        const formattedData = data.map(pt => ({
+          x: pt.x,
+          y: pt.y,
+          value: pt.intensity ?? 1,
+        }));
+      
+        window.heatmapInstance.setData({
+          max: 1,
+          data: formattedData,
+        });
+      }
+      
+      // Step 4: Show UX report text
+      function showUXReport(reportText) {
+        $('#uxReport').text(reportText);
+      }
+      
+      // Main submit flow
+      $('#submitBtn').click(async function () {
+        try {
+          // 1. Load Figma image
+          await loadDesignImage();
+      
+          // 2. Fetch full design JSON from backend
+          const figmaResponse = await $.ajax({
+            url: '/ux/fetch_figma_file/',
+            type: 'POST',
+            data: { file_id: FIGMA_FILE_ID },
           });
-
-          heatmapInstance.setData({
-            max: 1,
-            data: data,
-          });
+      
+          // 3. Send design JSON to AI for heatmap + report
+          const aiResponse = await analyzeDesignWithAI(figmaResponse.document);
+          
+          // Log the response to debug
+          console.log('AI Response:', aiResponse);
+          
+          if (!aiResponse || !aiResponse.heatmap_data || !aiResponse.heatmap_data.heatmap) {
+            throw new Error('Invalid response from AI analysis');
+          }
+      
+          // 4. Render heatmap
+          renderHeatmap(aiResponse.heatmap_data.heatmap);
+      
+          // 5. Show detailed UX report
+          showUXReport(aiResponse.heatmap_data.report);
+      
+          // 6. Show design name
+          $('#designName').text(figmaResponse.name || 'Unknown Design');
+        } catch (e) {
+          console.error('Error:', e);
+          alert('Failed to analyze design. Check console for details.');
         }
       });
     </script>
