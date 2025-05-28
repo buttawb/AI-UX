@@ -14,6 +14,12 @@ TEMP_TOKEN = "328267-66c5803b-80d4-4989-ad6f-8430d60fb714"
 FIGMA_NODE_ID = '2204:2822';
 
 
+@csrf_exempt
+def upload_design(request):
+    """
+    Upload a design (not used in this case as we fetch designs directly from Figma).
+    """
+    return render(request, 'upload.html')
 
 @csrf_exempt
 def fetch_figma_file(request):
