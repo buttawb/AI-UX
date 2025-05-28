@@ -3,6 +3,7 @@ import requests
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from .gemini_keys import GEMINI_API_KEY  # Ensure you have this file with your API key
 import re
 
 # Hardcoded Figma file ID
@@ -11,7 +12,8 @@ FIGMA_ACCESS_TOKEN = 'figd_8KqZh4idtJM7bfuJ8AXSoTAGyJ_n42hLZwgNVUx8'
 RAMSHA_FIGMA_ACCESS_TOKEN = 'figd_3bgofXhJbrbVRuPxlaXmrH-AwL6RTdr9hW1PLydz'
 OPENAI_API_KEY = "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"
 TEMP_TOKEN = "328267-66c5803b-80d4-4989-ad6f-8430d60fb714"
-FIGMA_NODE_ID = '0:1';
+FIGMA_NODE_ID = '0:1'
+
 
 
 @csrf_exempt
@@ -50,7 +52,7 @@ def generate_heatmap(request):
         figma_data = data.get('figma_data')
 
         try:
-            heatmap_data = call_openai_heatmap(figma_data)
+            heatmap_data = call_gemini_heatmap(figma_data)
         except Exception as e:
             return JsonResponse({'error': f'OpenAI call failed: {str(e)}'}, status=500)
 
@@ -140,6 +142,57 @@ def call_openai_heatmap(figma_data):
    heatmap_report = extract_json_from_openai(content)  # Your function to safely parse JSON from response
 
    return heatmap_report
+
+
+@csrf_exempt
+def call_gemini_heatmap(figma_data):
+    """
+    Get UX analysis from Google's Gemini API
+    """
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
+    
+    prompt = f"""
+    As a UX/UI expert, analyze this Figma design JSON data and provide:
+    1. A heatmap of likely user interactions
+    2. A UX/UI critique
+    3. Specific improvement suggestions
+    
+    Design data: {json.dumps(figma_data)}
+    
+    Format response as JSON with these keys:
+    {{
+        "heatmap": [
+            {{"x": 123, "y": 456, "intensity": 0.9}}
+        ],
+        "report": "UX analysis text here",
+        "suggestions": [
+            {{"x": 150, "y": 400, "suggestion": "Improvement text"}}
+        ]
+    }}
+    """
+
+    headers = {
+        "Content-Type": "application/json",
+        "x-goog-api-key": GEMINI_API_KEY
+    }
+    
+    payload = {
+        "contents": [{
+            "parts": [{"text": prompt}]
+        }]
+    }
+
+    response = requests.post(url, headers=headers, json=payload)
+    print("Gemini API response status code:", response.status_code)  # Debugging output
+    print("response text:", response.text)  # Debugging output
+    response.raise_for_status()
+    result = response.json()
+
+    content = result["candidates"][0]["content"]["parts"][0]["text"]
+    heatmap_report = extract_json_from_openai(content)  # Reuse JSON extraction function
+    print("Gemini response content:", heatmap_report)
+
+    return heatmap_report
 
 
 def extract_json_from_openai(content):

@@ -75,11 +75,7 @@
           if (response.image_url) {
             const $img = $('#figmaImage');
             $img.attr('src', response.image_url);
-            // Remove any fixed width/height on container to allow resizing
-            $('#heatmapContainer').css({ width: '', height: '' });
-            $('#heatmapLayer').css({ width: '', height: '' });
-            $img.css({ width: '', height: '' });
-            // Wait for image to load, then set container size
+            // Wait for image to load, then set container and heatmapLayer size to match image
             return new Promise(resolve => {
               $img.on('load', function() {
                 const naturalWidth = this.naturalWidth;
@@ -87,27 +83,11 @@
                 // Set heatmapContainer and heatmapLayer to match image size exactly
                 $('#heatmapContainer').css({
                   width: naturalWidth + 'px',
-                  height: naturalHeight + 'px',
-                  minWidth: naturalWidth + 'px',
-                  minHeight: naturalHeight + 'px',
-                  maxWidth: naturalWidth + 'px',
-                  maxHeight: naturalHeight + 'px',
+                  height: naturalHeight + 'px'
                 });
                 $('#heatmapLayer').css({
                   width: naturalWidth + 'px',
-                  height: naturalHeight + 'px',
-                  minWidth: naturalWidth + 'px',
-                  minHeight: naturalHeight + 'px',
-                  maxWidth: naturalWidth + 'px',
-                  maxHeight: naturalHeight + 'px',
-                });
-                $img.css({
-                  width: naturalWidth + 'px',
-                  height: naturalHeight + 'px',
-                  minWidth: naturalWidth + 'px',
-                  minHeight: naturalHeight + 'px',
-                  maxWidth: naturalWidth + 'px',
-                  maxHeight: naturalHeight + 'px',
+                  height: naturalHeight + 'px'
                 });
                 resolve();
               });
