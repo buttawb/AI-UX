@@ -18,6 +18,15 @@
       .file-selection {
         margin: 10px 0;
       }
+
+      /* Add marker style */
+      .ux-suggestion-marker {
+        transition: box-shadow 0.2s;
+        box-shadow: 0 0 8px #f00;
+      }
+      .ux-suggestion-marker:hover {
+        box-shadow: 0 0 16px #f00;
+      }
     </style>
   </head>
   <body>
@@ -38,14 +47,18 @@
 
     <div style="display:flex; gap: 20px;">
       <!-- Left: Design + Heatmap container -->
-      <div id="heatmapContainer" style="position: relative; width: 600px; height: 600px; border: 1px solid #ccc;">
+      <div id="heatmapContainer" style="position: relative; width: 1300px; height: 600px; border: 1px solid #ccc;">
         <img id="figmaImage" src="" alt="Figma Design" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 0;">
         <div id="heatmapLayer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;"></div>
       </div>
     
       <!-- Right: UX Report -->
-      <div id="uxReport" style="width: 400px; max-height: 600px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; font-family: monospace; white-space: pre-wrap;"></div>
     </div>
+    <br>
+    <br>
+
+          <div id="uxReport" style="width: 1300px; max-height: 600px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; font-family: monospace; white-space: pre-wrap;"></div>
+
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/heatmap.js/2.0.2/heatmap.min.js"></script>
@@ -60,7 +73,47 @@
           type: 'GET',
         }).then(response => {
           if (response.image_url) {
-            $('#figmaImage').attr('src', response.image_url);
+            const $img = $('#figmaImage');
+            $img.attr('src', response.image_url);
+            // Remove any fixed width/height on container to allow resizing
+            $('#heatmapContainer').css({ width: '', height: '' });
+            $('#heatmapLayer').css({ width: '', height: '' });
+            $img.css({ width: '', height: '' });
+            // Wait for image to load, then set container size
+            return new Promise(resolve => {
+              $img.on('load', function() {
+                const naturalWidth = this.naturalWidth;
+                const naturalHeight = this.naturalHeight;
+                // Set heatmapContainer and heatmapLayer to match image size exactly
+                $('#heatmapContainer').css({
+                  width: naturalWidth + 'px',
+                  height: naturalHeight + 'px',
+                  minWidth: naturalWidth + 'px',
+                  minHeight: naturalHeight + 'px',
+                  maxWidth: naturalWidth + 'px',
+                  maxHeight: naturalHeight + 'px',
+                });
+                $('#heatmapLayer').css({
+                  width: naturalWidth + 'px',
+                  height: naturalHeight + 'px',
+                  minWidth: naturalWidth + 'px',
+                  minHeight: naturalHeight + 'px',
+                  maxWidth: naturalWidth + 'px',
+                  maxHeight: naturalHeight + 'px',
+                });
+                $img.css({
+                  width: naturalWidth + 'px',
+                  height: naturalHeight + 'px',
+                  minWidth: naturalWidth + 'px',
+                  minHeight: naturalHeight + 'px',
+                  maxWidth: naturalWidth + 'px',
+                  maxHeight: naturalHeight + 'px',
+                });
+                resolve();
+              });
+              // If already loaded (cache), trigger manually
+              if ($img[0].complete) $img.trigger('load');
+            });
           }
         });
       }
@@ -94,17 +147,60 @@
           minOpacity: 0,
           blur: 0.75,
         });
-      
+    
         // heatmap.js expects 'value' key instead of 'intensity'
         const formattedData = data.map(pt => ({
           x: pt.x,
           y: pt.y,
           value: pt.intensity ?? 1,
         }));
-      
+    
         window.heatmapInstance.setData({
           max: 1,
           data: formattedData,
+        });
+      }
+
+      // Step 3b: Render UX suggestions as markers on the image
+      function renderSuggestions(suggestions) {
+        const container = document.getElementById('heatmapLayer');
+        const img = document.getElementById('figmaImage');
+        // Remove old markers
+        container.querySelectorAll('.ux-suggestion-marker').forEach(m => m.remove());
+        if (!Array.isArray(suggestions) || !img.complete) return;
+
+        // Use the actual image and container size (now always equal)
+        const imgNaturalWidth = img.naturalWidth;
+        const imgNaturalHeight = img.naturalHeight;
+        const imgDisplayWidth = img.width;
+        const imgDisplayHeight = img.height;
+
+        suggestions.forEach((s, idx) => {
+          // Map Figma coordinates (assuming they are relative to the natural image size)
+          const x = (s.x / imgNaturalWidth) * imgDisplayWidth;
+          const y = (s.y / imgNaturalHeight) * imgDisplayHeight;
+
+          const marker = document.createElement('div');
+          marker.className = 'ux-suggestion-marker';
+          marker.style.position = 'absolute';
+          marker.style.left = (x - 10) + 'px';
+          marker.style.top = (y - 10) + 'px';
+          marker.style.width = '20px';
+          marker.style.height = '20px';
+          marker.style.background = 'rgba(255,0,0,0.7)';
+          marker.style.borderRadius = '50%';
+          marker.style.display = 'flex';
+          marker.style.alignItems = 'center';
+          marker.style.justifyContent = 'center';
+          marker.style.cursor = 'pointer';
+          marker.style.zIndex = 2;
+          marker.title = s.suggestion;
+          marker.innerHTML = `<span style='color:#fff;font-size:12px;font-weight:bold;'>${idx+1}</span>`;
+          marker.onclick = function(e) {
+            e.stopPropagation();
+            alert(s.suggestion);
+          };
+          container.appendChild(marker);
         });
       }
       
@@ -126,7 +222,7 @@
             data: { file_id: FIGMA_FILE_ID },
           });
       
-          // 3. Send design JSON to AI for heatmap + report
+          // 3. Send design JSON to AI for heatmap + report + suggestions
           const aiResponse = await analyzeDesignWithAI(figmaResponse.document);
           
           // Log the response to debug
@@ -138,6 +234,11 @@
       
           // 4. Render heatmap
           renderHeatmap(aiResponse.heatmap_data.heatmap);
+
+          // 4b. Render UX suggestions as markers
+          if (aiResponse.heatmap_data.suggestions) {
+            renderSuggestions(aiResponse.heatmap_data.suggestions);
+          }
       
           // 5. Show detailed UX report
           showUXReport(aiResponse.heatmap_data.report);

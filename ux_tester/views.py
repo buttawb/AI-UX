@@ -78,7 +78,7 @@ def call_openai_heatmap(figma_data):
     - Possible confusing flows or abandoned points
     - Elements that might cause hesitation or repeated clicks
 
-    3. Return two separate outputs:
+    3. Return three separate outputs:
 
     a) A JSON array of simulated user interaction points for a heatmap.
         Each point should have:
@@ -94,16 +94,28 @@ def call_openai_heatmap(figma_data):
 
     b) A detailed UX/UI report as plain text summarizing all observations and recommendations.
 
+    c) A JSON array of UX improvement suggestions, where each suggestion has:
+        - "x": horizontal coordinate (integer) indicating where the suggestion applies
+        - "y": vertical coordinate (integer)
+        - "suggestion": a short actionable suggestion for improvement (string)
+
+        Example:
+        [
+            {{"x": 150, "y": 400, "suggestion": "Increase button contrast for better visibility."}},
+            {{"x": 320, "y": 220, "suggestion": "Enlarge font size for readability."}}
+        ]
+
     The Figma design data is:
     {json.dumps(figma_data)}
 
-    Respond with a JSON object with exactly two keys:
+    Respond with a JSON object with exactly three keys:
     {{
     "heatmap": [/* JSON array of heatmap points */],
-    "report": "Your detailed UX/UI critique and recommendations here."
+    "report": "Your detailed UX/UI critique and recommendations here.",
+    "suggestions": [/* JSON array of suggestions with coordinates and text */]
     }}
 
-    Important: Output ONLY valid JSON with these two keys, no extra commentary.
+    Important: Output ONLY valid JSON with these three keys, no extra commentary.
     """
    headers = {
        'Authorization': f'Bearer {OPENAI_API_KEY}',
@@ -123,6 +135,7 @@ def call_openai_heatmap(figma_data):
    result = response.json()
 
    content = result["choices"][0]["message"]["content"]
+   print("OpenAI response content:", content)  # Debugging output
 
    heatmap_report = extract_json_from_openai(content)  # Your function to safely parse JSON from response
 
