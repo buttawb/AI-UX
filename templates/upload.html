@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI UX Tester</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      #heatmapContainer {
+        width: 500px;
+        height: 500px;
+        position: relative;
+        border: 1px solid #ccc;
+      }
+      .file-selection {
+        margin: 10px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>AI UX Tester</h1>
+
+    <!-- Select Figma File (this is hardcoded for now) -->
+    <div class="file-selection">
+      <label for="figmaFileSelect">Figma File: </label>
+      <span>Document-Upload-Scenarios</span>
+      <!-- This is hardcoded for now -->
+    </div>
+
+    <!-- Submit Button -->
+    <button id="submitBtn">Submit for Analysis</button>
+
+    <!-- Display Heatmap -->
+    <div id="heatmapContainer"></div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/heatmap.js/2.0.2/heatmap.min.js"></script>
+
+    <script>
+      $(document).ready(function () {
+        // Handle the Submit button click event
+        $("#submitBtn").click(function () {
+          // Since we're hardcoding the Figma file ID, we don't need file selection anymore
+          const file_id = "4xy1xC6HKD3gGbNNB4SiI5"; // Hardcoded Figma file ID
+
+          // Fetch the Figma file data using the hardcoded file ID
+          $.ajax({
+            url: "/ux/fetch_figma_file/",
+            type: "POST",
+            data: { file_id: file_id },
+            success: function (response) {
+              const figmaData = response.document;
+
+              // Send only Figma data for AI processing
+              $.ajax({
+                url: "/ux/generate_heatmap/",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({
+                  figma_data: figmaData,
+                }),
+                success: function (response) {
+                  const heatmapDataRaw = response.heatmap_data;
+
+                  // Convert incoming heatmap data from {x, y, intensity} to {x, y, value}
+                  const heatmapData = heatmapDataRaw.map((point) => ({
+                    x: point.x,
+                    y: point.y,
+                    value: point.intensity || 1,
+                  }));
+
+                  renderHeatmap(heatmapData);
+                },
+              });
+            },
+          });
+        });
+
+        // Render the heatmap using Heatmap.js
+        function renderHeatmap(data) {
+          const container = document.getElementById("heatmapContainer");
+
+          heatmapInstance = h337.create({
+            container: container,
+            radius: 40,
+            maxOpacity: 0.6,
+            minOpacity: 0,
+            blur: 0.75,
+          });
+
+          heatmapInstance.setData({
+            max: 1,
+            data: data,
+          });
+        }
+      });
+    </script>
+  </body>
+</html>
