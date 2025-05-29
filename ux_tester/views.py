@@ -196,89 +196,87 @@ def call_gemini_heatmap(figma_data):
     """
 
     # Option 2: Try the latest 1.5 pro model
-    model_name = "gemini-1.5-pro-latest"
-    model_name = "gemini-2.5-flash-preview-05-20"
-    model_name = "gemini-1.5-pro"
-    model_name = "gemini-2.0-flash"
-
-    # Construct the API URL with the chosen model name
-    gemini_api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={AVIALDO_GEMINI_KEY}"
+    # Try models in order of preference, starting with the most capable
+    model_names = [
+        "gemini-1.5-pro-latest",  # Latest version with potentially higher limits
+        "gemini-1.5-pro",         # Stable version
+        "gemini-2.0-flash",       # Fallback
+    ]
     
-    headers = {
-        'Content-Type': 'application/json',
-    }
-
-    request_body = {
-        "contents": [{
-            "parts": [{"text": prompt}]
-        }],
-        "generationConfig": {
-            "temperature": 0.7,
-            "topK": 40,
-            "topP": 0.95,
-            "maxOutputTokens": 4096,
-        }
-    }
-
-    try:
-        print(f"Calling Gemini API with URL: {gemini_api_url}")
-        response = requests.post(gemini_api_url, headers=headers, json=request_body, timeout=180)
-        response.raise_for_status()
-        
-        response_json = response.json()
-
-        if "candidates" not in response_json or not response_json["candidates"]:
-            prompt_feedback = response_json.get("promptFeedback")
-            error_message = f"Gemini API returned no candidates for model {model_name}."
-            if prompt_feedback:
-                block_reason = prompt_feedback.get('blockReason')
-                safety_ratings = prompt_feedback.get('safetyRatings')
-                error_message += f" Prompt feedback: Block Reason: {block_reason}, Safety Ratings: {safety_ratings}"
-            print(f"Gemini API response with no candidates: {response_json}")
-            raise Exception(error_message)
-
-        content_data = response_json["candidates"][0].get("content")
-        if not content_data or "parts" not in content_data or not content_data["parts"]:
-            print(f"Gemini API response missing 'parts' in content: {response_json}")
-            raise Exception(f"Gemini API response missing 'parts' in content for model {model_name}.")
+    last_error = None
+    for model_name in model_names:
+        try:
+            # Construct the API URL with the chosen model name
+            gemini_api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={AVIALDO_GEMINI_KEY}"
             
-        parts = content_data["parts"]
-        if "text" not in parts[0]:
-            print(f"Gemini API response missing 'text' in parts[0]: {response_json}")
-            raise Exception(f"Gemini API response missing 'text' in parts[0] for model {model_name}.")
-            
-        content = parts[0]["text"]
-        
-        heatmap_report = extract_json_from_model_response(content)
-        
-        # Validate that only expected frame IDs are present in the response
-        if "analysis_data" in heatmap_report:
-            unexpected_frames = set(heatmap_report["analysis_data"].keys()) - set(frame_data.keys())
-            if unexpected_frames:
-                print(f"Warning: Response contains unexpected frame IDs: {unexpected_frames}")
-                # Filter out unexpected frames
-                heatmap_report["analysis_data"] = {
-                    k: v for k, v in heatmap_report["analysis_data"].items() 
-                    if k in frame_data.keys()
+            headers = {
+                'Content-Type': 'application/json',
+            }
+
+            request_body = {
+                "contents": [{
+                    "parts": [{"text": prompt}]
+                }],
+                "generationConfig": {
+                    "temperature": 0.9,        # Increased for more creativity
+                    "topK": 60,               # Increased to allow more diverse vocabulary
+                    "topP": 0.98,             # Increased for more diverse responses
+                    "maxOutputTokens": 8192,   # Doubled for more detailed analysis
+                    "candidateCount": 1,       # Number of responses to generate
+                    "stopSequences": [],       # No early stopping
                 }
-        
-        return heatmap_report
+            }
 
-    except requests.exceptions.HTTPError as e:
-        print(f"HTTPError calling Gemini API (Status: {e.response.status_code}): {str(e)}")
-        print(f"Gemini API Response Body: {e.response.text}")
-        if e.response.status_code == 404:
-             raise Exception(f"Failed to call Gemini API: Model '{model_name}' not found or not supported for generateContent on v1beta. Check model name and API key permissions. Response: {e.response.text}")
-        raise Exception(f"Failed to call Gemini API (HTTPError): {str(e)}. Response: {e.response.text}")
-    except requests.exceptions.RequestException as e:
-        print(f"Error calling Gemini API (RequestException): {str(e)}")
-        raise Exception(f"Failed to call Gemini API (RequestException): {str(e)}")
-    except KeyError as e_key:
-        print(f"Error parsing Gemini API response (KeyError): {str(e_key)}. Response: {response_json if 'response_json' in locals() else 'Response JSON not available'}")
-        raise Exception(f"Failed to parse Gemini API response: Invalid structure. Error: {str(e_key)}")
-    except Exception as e_gen:
-        print(f"Error processing Gemini response: {str(e_gen)}")
-        raise
+            print(f"Attempting with model: {model_name}")
+            response = requests.post(gemini_api_url, headers=headers, json=request_body, timeout=900)
+            response.raise_for_status()
+            
+            response_json = response.json()
+            if "candidates" in response_json and response_json["candidates"]:
+                # Success! Process the response
+                content_data = response_json["candidates"][0].get("content")
+                if not content_data or "parts" not in content_data or not content_data["parts"]:
+                    continue
+                    
+                parts = content_data["parts"]
+                if "text" not in parts[0]:
+                    continue
+                    
+                content = parts[0]["text"]
+                heatmap_report = extract_json_from_model_response(content)
+                
+                # Validate that only expected frame IDs are present in the response
+                if "analysis_data" in heatmap_report:
+                    unexpected_frames = set(heatmap_report["analysis_data"].keys()) - set(frame_data.keys())
+                    if unexpected_frames:
+                        print(f"Warning: Response contains unexpected frame IDs: {unexpected_frames}")
+                        # Filter out unexpected frames
+                        heatmap_report["analysis_data"] = {
+                            k: v for k, v in heatmap_report["analysis_data"].items() 
+                            if k in frame_data.keys()
+                        }
+                
+                return heatmap_report
+                
+        except requests.exceptions.HTTPError as e:
+            last_error = e
+            print(f"Failed with model {model_name}: {str(e)}")
+            if e.response.status_code == 400 and "token count" in e.response.text.lower():
+                print(f"Token limit exceeded with model {model_name}, trying next model...")
+                continue
+            if e.response.status_code == 404:
+                print(f"Model {model_name} not found, trying next model...")
+                continue
+            raise Exception(f"Failed to call Gemini API (HTTPError): {str(e)}. Response: {e.response.text}")
+        except Exception as e:
+            last_error = e
+            print(f"Error with model {model_name}: {str(e)}")
+            continue
+    
+    # If we get here, all models failed
+    if last_error:
+        raise Exception(f"All Gemini models failed. Last error: {str(last_error)}")
+    raise Exception("All Gemini models failed without specific error information")
 
 
 def extract_json_from_model_response(content): # Renamed from extract_json_from_openai
