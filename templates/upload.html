@@ -252,16 +252,16 @@
 
         .ux-suggestion-marker {
             position: absolute;
-            width: 28px;
-            height: 28px;
-            background: linear-gradient(135deg, #ef4444, #dc2626);
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--primary), #4f46e5);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
             font-weight: 600;
-            font-size: 14px;
+            font-size: 16px;
             cursor: pointer;
             transition: all 0.2s ease;
             z-index: 10;
@@ -273,6 +273,66 @@
         .ux-suggestion-marker:hover {
             transform: translate(-50%, -50%) scale(1.2);
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .suggestion-popup {
+            position: absolute;
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            z-index: 9999;
+            max-width: 300px;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+            --arrow-position: bottom;
+        }
+
+        .suggestion-popup.active {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: all;
+        }
+
+        .suggestion-popup h3 {
+            color: var(--text);
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .suggestion-popup h3::before {
+            content: '💡';
+            font-size: 1.2em;
+        }
+
+        .suggestion-popup p {
+            color: var(--text-light);
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        .suggestion-popup::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+        }
+
+        .suggestion-popup::after {
+            top: var(--arrow-position) == 'bottom' ? -8px : auto;
+            bottom: var(--arrow-position) == 'top' ? -8px : auto;
+            border-bottom: var(--arrow-position) == 'bottom' ? 8px solid var(--surface) : none;
+            border-top: var(--arrow-position) == 'top' ? 8px solid var(--surface) : none;
         }
 
         @keyframes spin {
@@ -613,23 +673,83 @@
 
               console.log('Rendering suggestions:', suggestions);
 
+              // Create popup element
+              const popup = document.createElement('div');
+              popup.className = 'suggestion-popup';
+              container.appendChild(popup); // Keep popup within container
+
+              let activeMarker = null;
+
               suggestions.forEach((s, idx) => {
                   const marker = document.createElement('div');
                   marker.className = 'ux-suggestion-marker';
                   
-                  // Use coordinates directly as percentages
                   marker.style.left = `${s.x}%`;
                   marker.style.top = `${s.y}%`;
                   
-                  marker.title = s.suggestion;
                   marker.innerHTML = `<span>${idx + 1}</span>`;
+                  
                   marker.onclick = (e) => { 
-                      e.stopPropagation(); 
-                      alert(`Suggestion #${idx+1}: ${s.suggestion}`); 
+                      e.stopPropagation();
+                      
+                      // Toggle popup if clicking the same marker
+                      if (activeMarker === marker) {
+                          popup.classList.remove('active');
+                          activeMarker = null;
+                          return;
+                      }
+                      
+                      // Update popup content
+                      popup.innerHTML = `
+                          <h3>Suggestion #${idx + 1}</h3>
+                          <p>${s.suggestion}</p>
+                      `;
+                      
+                      // Position popup relative to marker
+                      const markerRect = marker.getBoundingClientRect();
+                      const containerRect = container.getBoundingClientRect();
+                      const popupRect = popup.getBoundingClientRect();
+                      
+                      // Calculate position relative to container
+                      let top = markerRect.top - containerRect.top - popupRect.height - 10;
+                      let left = markerRect.left - containerRect.left - (popupRect.width / 2) + (markerRect.width / 2);
+                      
+                      // Adjust if popup would go off the top of the container
+                      if (top < 0) {
+                          top = markerRect.bottom - containerRect.top + 10;
+                          popup.style.setProperty('--arrow-position', 'top');
+                      } else {
+                          popup.style.setProperty('--arrow-position', 'bottom');
+                      }
+                      
+                      // Adjust if popup would go off the left of the container
+                      if (left < 0) {
+                          left = 0;
+                      }
+                      
+                      // Adjust if popup would go off the right of the container
+                      if (left + popupRect.width > containerRect.width) {
+                          left = containerRect.width - popupRect.width;
+                      }
+                      
+                      popup.style.top = `${top}px`;
+                      popup.style.left = `${left}px`;
+                      
+                      // Show popup
+                      popup.classList.add('active');
+                      activeMarker = marker;
                   };
                   
                   console.log('Adding marker at:', { x: s.x, y: s.y, suggestion: s.suggestion });
                   container.appendChild(marker);
+              });
+
+              // Close popup when clicking outside
+              document.addEventListener('click', (e) => {
+                  if (!e.target.closest('.ux-suggestion-marker')) {
+                      popup.classList.remove('active');
+                      activeMarker = null;
+                  }
               });
           }
       });
