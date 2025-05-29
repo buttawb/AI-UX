@@ -137,35 +137,54 @@
                       }
   
                       // Create the HTML structure for this frame
+                      const safeId = frame.id.replace(/:/g, '-');
                       const frameHtml = `
-                          <div class="frame-container" id="frame-container-${frame.id}">
+                          <div class="frame-container" id="frame-container-${safeId}">
                               <div class="frame-header">${frame.name}</div>
                               <div class="analysis-content">
                                   <div class="design-column">
-                                      <div class="heatmap-container" id="heatmap-container-${frame.id}">
-                                          <img id="image-${frame.id}" src="${imageUrl}" alt="Design for ${frame.name}" />
-                                          <div class="heatmap-layer" id="heatmap-layer-${frame.id}"></div>
+                                      <div class="heatmap-container" id="heatmap-container-${safeId}">
+                                          <img id="image-${safeId}" src="${imageUrl}" alt="Design for ${frame.name}" onerror="console.error('Image failed to load:', this.src)" />
+                                          <div class="heatmap-layer" id="heatmap-layer-${safeId}"></div>
                                       </div>
                                   </div>
                                   <div class="report-column">
                                       <h2>UX/UI Report</h2>
-                                      <div class="ux-report" id="report-${frame.id}">${frameAnalysis.report}</div>
+                                      <div class="ux-report" id="report-${safeId}">${frameAnalysis.report}</div>
                                   </div>
                               </div>
                           </div>
                       `;
                       $analysisContainer.append(frameHtml);
   
+                      console.log(`Setting up image load handler for frame ${frame.id} with URL:`, imageUrl);
+                      
                       // Wait for the image to load before rendering heatmap/suggestions
-                      // $(`#image-${frame.id}`).on('load', function() {
+                      const $image = $(`#image-${safeId}`);
+                      console.log(`Looking for image with ID: image-${safeId}`);
+                      console.log('Image element found:', $image.length > 0);
+                      
+                      $image.on('load', function() {
+                          console.log(`Image load event triggered for frame ${frame.id}`);
                           const $image = $(this);
-
-                          renderHeatmap(frameAnalysis.heatmap, `heatmap-container-${frame.id}`);
-                          renderSuggestions(frameAnalysis.suggestions, this, `heatmap-container-${frame.id}`);
-                          $(`#report-${frame.id}`).text(frameAnalysis.report);
-                      // }).each(function() {
-                         // if (this.complete) $(this).trigger('load');
-                      // });
+                          const imgNaturalWidth = $image[0].naturalWidth;
+                          const imgNaturalHeight = $image[0].naturalHeight;
+                          console.log(`Image loaded for frame ${frame.id}:`, {
+                              naturalWidth: imgNaturalWidth,
+                              naturalHeight: imgNaturalHeight,
+                              src: $image.attr('src')
+                          });
+                          renderHeatmap(frameAnalysis.heatmap, `heatmap-container-${safeId}`, imgNaturalWidth, imgNaturalHeight);
+                          renderSuggestions(frameAnalysis.suggestions, this, `heatmap-container-${safeId}`, imgNaturalWidth, imgNaturalHeight);
+                      }).on('error', function(e) {
+                          console.error(`Error loading image for frame ${frame.id}:`, e);
+                      }).each(function() {
+                          console.log(`Checking if image ${frame.id} is already complete:`, this.complete);
+                          if (this.complete) {
+                              console.log(`Image ${frame.id} is already loaded, triggering load event`);
+                              $(this).trigger('load');
+                          }
+                      });
                   });
                   
                   $analysisContainer.show();
@@ -180,18 +199,57 @@
               }
           });
   
-          function renderHeatmap(data, containerId) {
-              if (!data || !Array.isArray(data)) return;
+          function renderHeatmap(data, containerId, imgWidth, imgHeight) {
+              console.log('Rendering heatmap with data:', data);
+              console.log('Container ID:', containerId);
+              console.log('Image dimensions:', { width: imgWidth, height: imgHeight });
+              
+              if (!data || !Array.isArray(data)) {
+                  console.warn('Invalid heatmap data:', data);
+                  return;
+              }
+              
               const container = document.getElementById(containerId);
-              if (!container) return; // Add check for container existence
+              if (!container) {
+                  console.error('Container not found:', containerId);
+                  return;
+              }
 
-              console.log("FINAL RENDERING OF HEATMAP DATA:", data);
-              const heatmapInstance = h337.create({ container: container, radius: 40, maxOpacity: 0.6, blur: 0.75 });
-              const formattedData = data.map(pt => ({ x: pt.x, y: pt.y, value: pt.intensity ?? 1 }));
-              console.log("IAM HEATMAP DATA:", formattedData);
-              console.log("Heatmap instance created for container:", heatmapInstance);
-              console.log("CONtainer ID", containerId);
-              heatmapInstance.setData({ max: 1, data: formattedData });
+              // Get the container's dimensions
+              const containerWidth = container.offsetWidth;
+              const containerHeight = container.offsetHeight;
+              console.log('Container dimensions:', { width: containerWidth, height: containerHeight });
+
+              // Create heatmap instance with proper configuration
+              const heatmapInstance = h337.create({
+                  container: container,
+                  radius: 40,
+                  maxOpacity: 0.6,
+                  minOpacity: 0,
+                  blur: 0.75,
+                  gradient: {
+                      '.5': 'blue',
+                      '.8': 'red',
+                      '.95': 'white'
+                  }
+              });
+
+              // Scale the coordinates to match the container size
+              const formattedData = data.map(pt => ({
+                  x: Math.round((pt.x / imgWidth) * containerWidth),
+                  y: Math.round((pt.y / imgHeight) * containerHeight),
+                  value: pt.intensity || 1
+              }));
+
+              console.log('Formatted heatmap data:', formattedData);
+
+              // Set the data with proper max value
+              heatmapInstance.setData({
+                  max: 1,
+                  data: formattedData
+              });
+
+              console.log('Heatmap rendered successfully');
           }
           
           function renderSuggestions(suggestions, imgElement, containerId) {
