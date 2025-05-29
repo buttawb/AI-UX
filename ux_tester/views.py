@@ -145,16 +145,23 @@ def call_gemini_heatmap(figma_data):
     """
     Get UX analysis from Google's Gemini API using direct HTTP requests.
     """
-    # This is the CORRECT prompt for the multi-frame version
-    prompt = """
-    You are a world-class UX/UI design expert. Analyze the provided Figma design JSON.
-    Your task is to analyze every top-level frame within the canvases.
+    # Extract all frame IDs from the Figma data first
+    frame_ids = []
+    for canvas in figma_data.get('children', []):
+        for frame in canvas.get('children', []):
+            if frame.get('type') == 'FRAME':
+                frame_ids.append(frame.get('id'))
 
-    For EACH frame, provide a detailed analysis. The final output must be a single, valid JSON object where each key is the frame's node ID.
+    # This is the CORRECT prompt for the multi-frame version
+    prompt = f"""
+    You are a world-class UX/UI design expert. Analyze the provided Figma design JSON.
+    Your task is to analyze ONLY the frames with the following node IDs: {frame_ids}
+
+    For EACH of these specific frames, provide a detailed analysis. The final output must be a single, valid JSON object where each key is one of the frame's node IDs listed above.
     The value for each key should be another JSON object with three keys: "heatmap", "report", and "suggestions".
 
     Here is the Figma design data:
-    {}
+    {json.dumps(figma_data)}
 
     Example of the required final JSON output structure:
     {{
@@ -171,14 +178,16 @@ def call_gemini_heatmap(figma_data):
             }}
         }}
     }}
-    Important: Respond ONLY with the valid JSON object described above.
-    """.format(json.dumps(figma_data))
 
-    # Option 1: Try gemini-1.0-pro (often a good default for this endpoint)
-    # model_name = "gemini-1.0-pro"
-    
+    Important: 
+    1. ONLY analyze frames with IDs that are in the list provided above
+    2. DO NOT analyze any other frames or nodes
+    3. Respond ONLY with the valid JSON object described above
+    4. Each frame ID in your response must match one from the provided list
+    """
+
     # Option 2: Try the latest 1.5 pro model
-    model_name = "gemini-1.5-pro-latest" # Using this as it's generally preferred if available
+    model_name = "gemini-1.5-pro-latest"
 
     # Construct the API URL with the chosen model name
     gemini_api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={AVIALDO_GEMINI_KEY}"
@@ -195,13 +204,13 @@ def call_gemini_heatmap(figma_data):
             "temperature": 0.7,
             "topK": 40,
             "topP": 0.95,
-            "maxOutputTokens": 4096, # Increased further for safety with complex responses
+            "maxOutputTokens": 4096,
         }
     }
 
     try:
-        print(f"Calling Gemini API with URL: {gemini_api_url}") # Log the URL being used
-        response = requests.post(gemini_api_url, headers=headers, json=request_body, timeout=180) # Increased timeout
+        print(f"Calling Gemini API with URL: {gemini_api_url}")
+        response = requests.post(gemini_api_url, headers=headers, json=request_body, timeout=180)
         response.raise_for_status()
         
         response_json = response.json()
@@ -213,7 +222,6 @@ def call_gemini_heatmap(figma_data):
                 block_reason = prompt_feedback.get('blockReason')
                 safety_ratings = prompt_feedback.get('safetyRatings')
                 error_message += f" Prompt feedback: Block Reason: {block_reason}, Safety Ratings: {safety_ratings}"
-            # Log the full response if no candidates are found for debugging
             print(f"Gemini API response with no candidates: {response_json}")
             raise Exception(error_message)
 
@@ -228,15 +236,25 @@ def call_gemini_heatmap(figma_data):
             raise Exception(f"Gemini API response missing 'text' in parts[0] for model {model_name}.")
             
         content = parts[0]["text"]
-        # print("Gemini response raw content:", content) 
         
         heatmap_report = extract_json_from_model_response(content)
+        
+        # Validate that only expected frame IDs are present in the response
+        if "analysis_data" in heatmap_report:
+            unexpected_frames = set(heatmap_report["analysis_data"].keys()) - set(frame_ids)
+            if unexpected_frames:
+                print(f"Warning: Response contains unexpected frame IDs: {unexpected_frames}")
+                # Filter out unexpected frames
+                heatmap_report["analysis_data"] = {
+                    k: v for k, v in heatmap_report["analysis_data"].items() 
+                    if k in frame_ids
+                }
+        
         return heatmap_report
 
     except requests.exceptions.HTTPError as e:
         print(f"HTTPError calling Gemini API (Status: {e.response.status_code}): {str(e)}")
         print(f"Gemini API Response Body: {e.response.text}")
-        # Specific check for 404 to reiterate model name issue if it persists
         if e.response.status_code == 404:
              raise Exception(f"Failed to call Gemini API: Model '{model_name}' not found or not supported for generateContent on v1beta. Check model name and API key permissions. Response: {e.response.text}")
         raise Exception(f"Failed to call Gemini API (HTTPError): {str(e)}. Response: {e.response.text}")
@@ -246,7 +264,7 @@ def call_gemini_heatmap(figma_data):
     except KeyError as e_key:
         print(f"Error parsing Gemini API response (KeyError): {str(e_key)}. Response: {response_json if 'response_json' in locals() else 'Response JSON not available'}")
         raise Exception(f"Failed to parse Gemini API response: Invalid structure. Error: {str(e_key)}")
-    except Exception as e_gen: # Catch other potential errors like JSONDecodeError
+    except Exception as e_gen:
         print(f"Error processing Gemini response: {str(e_gen)}")
         raise
 
