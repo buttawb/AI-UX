@@ -23,6 +23,14 @@ Your task is to analyze ONLY the frames with the following node IDs and their di
 For EACH of these specific frames, provide a detailed analysis. The final output must be a single, valid JSON object where each key is one of the frame's node IDs listed above.
 The value for each key should be another JSON object with four keys: "heatmap", "report", "suggestions", and "ux_score".
 
+For EACH frame, identify UI components or regions where users might get confused, stuck, or abandon the task.  
+Provide these as an array called "drop_off_points". Each item should include:  
+- "x": percentage horizontal coordinate (0-100)  
+- "y": percentage vertical coordinate (0-100)  
+- "reason": a brief natural language explanation of why this spot causes drop-off.
+Include at least 1-2 drop-off points per frame if you find that something important to highlight else none can also happen.
+
+
 IMPORTANT: For coordinates in heatmap and suggestions:
 1. Use percentage-based coordinates (0-100) for both x and y values
 2. x: 0 means left edge, 100 means right edge
@@ -45,13 +53,23 @@ Example of the required final JSON output structure and make sure to follow it e
             "heatmap":  [{{"x": 50, "y": 50, "intensity": 0.9}}],
             "report": "...",
             "suggestions": [{{"x": 25, "y": 75, "suggestion": "Move button to bottom left"}}],
-            "ux_score": 85
+            "ux_score": 85,
+            "drop_off_points": [
+                {{"x":40,"y":60,"reason":"Users get stuck here because the button label is unclear."}},
+                {{"x":80,"y":20,"reason":"High abandonment due to missing feedback after click."}},
+                {{"x":10,"y":90,"reason":"Confusing navigation causes drop-off."}}
+            ],
         }},
         "4:2": {{
             "heatmap":  [{{"x": 75, "y": 25, "intensity": 0.8}}],
             "report": "...",
             "suggestions": [{{"x": 10, "y": 90, "suggestion": "Increase contrast in bottom left"}}],
-            "ux_score": 78
+            "ux_score": 78,
+            "drop_off_points": [
+                {{"x":40,"y":60,"reason":"Users get stuck here because the button label is unclear."}},
+                {{"x":80,"y":20,"reason":"High abandonment due to missing feedback after click."}},
+                {{"x":10,"y":90,"reason":"Confusing navigation causes drop-off."}}
+            ],
         }}
     }}
 }}
