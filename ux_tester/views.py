@@ -173,10 +173,6 @@ def call_gemini_heatmap(figma_data):
     4. Example: x: 50, y: 50 means center of the frame
     5. DO NOT use pixel values, use percentages only
 
-    Here is the Figma design data:
-    {json.dumps(figma_data)}
-
-
     Example of the required final JSON output structure and make sure to follow it exactly:
     {{
         "analysis_data": {{
@@ -192,6 +188,9 @@ def call_gemini_heatmap(figma_data):
             }}
         }}
     }}
+
+    Here is the Figma design data:
+    {json.dumps(figma_data)}
 
     """
 
