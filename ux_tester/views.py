@@ -145,20 +145,30 @@ def call_gemini_heatmap(figma_data):
     """
     Get UX analysis from Google's Gemini API using direct HTTP requests.
     """
-    # Extract all frame IDs from the Figma data first
-    frame_ids = []
+    # Extract all frame IDs and their dimensions from the Figma data first
+    frame_data = {}
     for canvas in figma_data.get('children', []):
         for frame in canvas.get('children', []):
             if frame.get('type') == 'FRAME':
-                frame_ids.append(frame.get('id'))
+                frame_data[frame.get('id')] = {
+                    'width': frame.get('absoluteBoundingBox', {}).get('width', 0),
+                    'height': frame.get('absoluteBoundingBox', {}).get('height', 0)
+                }
 
     # This is the CORRECT prompt for the multi-frame version
     prompt = f"""
     You are a world-class UX/UI design expert. Analyze the provided Figma design JSON.
-    Your task is to analyze ONLY the frames with the following node IDs: {frame_ids}
+    Your task is to analyze ONLY the frames with the following node IDs and their dimensions: {json.dumps(frame_data)}
 
     For EACH of these specific frames, provide a detailed analysis. The final output must be a single, valid JSON object where each key is one of the frame's node IDs listed above.
     The value for each key should be another JSON object with three keys: "heatmap", "report", and "suggestions".
+
+    IMPORTANT: For coordinates in heatmap and suggestions:
+    1. Use percentage-based coordinates (0-100) for both x and y values
+    2. x: 0 means left edge, 100 means right edge
+    3. y: 0 means top edge, 100 means bottom edge
+    4. Example: x: 50, y: 50 means center of the frame
+    5. DO NOT use pixel values, use percentages only
 
     Here is the Figma design data:
     {json.dumps(figma_data)}
@@ -167,14 +177,14 @@ def call_gemini_heatmap(figma_data):
     {{
         "analysis_data": {{
             "3:15": {{
-                "heatmap":  [{{"x": 123, "y": 456, "intensity": 0.9}}],
+                "heatmap":  [{{"x": 50, "y": 50, "intensity": 0.9}}],  // Center of frame
                 "report": "...",
-                "suggestions": [...]
+                "suggestions": [{{"x": 25, "y": 75, "suggestion": "Move button to bottom left"}}]  // Bottom left quadrant
             }},
             "4:2": {{
-                "heatmap":  [{{"x": 320, "y": 220, "suggestion": "Enlarge font size for readability."}}],
+                "heatmap":  [{{"x": 75, "y": 25, "intensity": 0.8}}],  // Top right quadrant
                 "report": "...",
-                "suggestions": [{{"x": 150, "y": 400, "suggestion": "Increase button contrast for better visibility."}}]
+                "suggestions": [{{"x": 10, "y": 90, "suggestion": "Increase contrast in bottom left"}}]
             }}
         }}
     }}
@@ -184,6 +194,7 @@ def call_gemini_heatmap(figma_data):
     2. DO NOT analyze any other frames or nodes
     3. Respond ONLY with the valid JSON object described above
     4. Each frame ID in your response must match one from the provided list
+    5. All coordinates MUST be percentages (0-100)
     """
 
     # Option 2: Try the latest 1.5 pro model
@@ -241,13 +252,13 @@ def call_gemini_heatmap(figma_data):
         
         # Validate that only expected frame IDs are present in the response
         if "analysis_data" in heatmap_report:
-            unexpected_frames = set(heatmap_report["analysis_data"].keys()) - set(frame_ids)
+            unexpected_frames = set(heatmap_report["analysis_data"].keys()) - set(frame_data.keys())
             if unexpected_frames:
                 print(f"Warning: Response contains unexpected frame IDs: {unexpected_frames}")
                 # Filter out unexpected frames
                 heatmap_report["analysis_data"] = {
                     k: v for k, v in heatmap_report["analysis_data"].items() 
-                    if k in frame_ids
+                    if k in frame_data.keys()
                 }
         
         return heatmap_report

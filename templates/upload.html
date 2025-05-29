@@ -20,14 +20,55 @@
         .analysis-content { display: flex; flex-wrap: wrap; gap: 20px; }
         .design-column { flex: 2; min-width: 400px; }
         .report-column { flex: 1; min-width: 300px; }
-        .heatmap-container { position: relative; border: 1px solid #ccc; background-color: #f0f0f0; display: inline-block; }
-        .heatmap-container img { display: block; max-width: 100%; height: auto; }
-        .heatmap-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        .heatmap-container { 
+            position: relative; 
+            border: 1px solid #ccc; 
+            background-color: #f0f0f0; 
+            display: inline-block;
+            max-width: 100%;
+        }
+        .heatmap-container img { 
+            display: block; 
+            max-width: 100%; 
+            height: auto;
+            position: relative;
+            z-index: 1;
+        }
+        .heatmap-layer { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            pointer-events: none;
+            z-index: 2;
+        }
         
         .ux-report { background-color: #fdfdfd; border: 1px solid #e0e0e0; padding: 15px; font-family: monospace; white-space: pre-wrap; max-height: 500px; overflow-y: auto; border-radius: 5px; font-size: 14px; line-height: 1.6; }
         
-        .ux-suggestion-marker { position: absolute; width: 24px; height: 24px; background: rgba(255, 26, 104, 0.8); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; z-index: 10; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
-        .ux-suggestion-marker:hover { transform: scale(1.2); box-shadow: 0 4px 10px rgba(0,0,0,0.4); }
+        .ux-suggestion-marker { 
+            position: absolute; 
+            width: 24px; 
+            height: 24px; 
+            background: rgba(255, 26, 104, 0.8); 
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            color: white; 
+            font-weight: bold; 
+            font-size: 14px; 
+            cursor: pointer; 
+            transition: transform 0.2s, box-shadow 0.2s; 
+            z-index: 10; 
+            border: 2px solid white; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            transform: translate(-50%, -50%);
+        }
+        .ux-suggestion-marker:hover { 
+            transform: translate(-50%, -50%) scale(1.2); 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4); 
+        }
     </style>
 </head>
 <body>
@@ -39,7 +80,7 @@
 
     <div id="loader">
         <div class="spinner"></div>
-        <p>Analyzing... This may take a few minutes for large files.</p>
+        <p id="loadingText">Analyzing... This may take a few minutes for large files.</p>
     </div>
 
     <div id="analysisContainer">
@@ -55,6 +96,19 @@
           const $submitBtn = $('#submitBtn');
           const $loader = $('#loader');
           const $analysisContainer = $('#analysisContainer');
+          const $loadingText = $('#loadingText');
+
+          // Helper function to ensure minimum display time for loading messages
+          async function updateLoadingText(text, minDisplayTime = 1500) {
+              const startTime = Date.now();
+              $loadingText.text(text);
+              
+              // Wait for the minimum display time
+              const elapsedTime = Date.now() - startTime;
+              if (elapsedTime < minDisplayTime) {
+                  await new Promise(resolve => setTimeout(resolve, minDisplayTime - elapsedTime));
+              }
+          }
   
           $submitBtn.on('click', async function() {
               $submitBtn.prop('disabled', true);
@@ -64,6 +118,7 @@
               try {
                   // 1. Fetch the entire Figma file structure
                   console.log("Fetching Figma file structure...");
+                  await updateLoadingText('Fetching Figma file structure...');
                   const figmaFileResponse = await $.ajax({
                       url: '/ux/fetch_figma_file/',
                       type: 'GET'
@@ -90,10 +145,12 @@
                       throw new Error("No frames found in the Figma file.");
                   }
                   console.log(`Found ${frames.length} frames to analyze.`);
+                  await updateLoadingText(`Found ${frames.length} frames to analyze...`);
                   const frameIds = frames.map(f => f.id);
   
                   // 3. Make parallel API calls
                   console.log("Fetching image URLs and running AI analysis in parallel...");
+                  await updateLoadingText('Fetching image URLs and preparing for AI analysis...');
                   const [imageResponse, analysisResponse] = await Promise.all([
                       $.ajax({
                           url: '/ux/fetch_figma_image_urls/',
@@ -109,6 +166,8 @@
                       })
                   ]);
                   const heatmapData = analysisResponse.heatmap_data;
+                  
+                  await updateLoadingText('Processing AI analysis results...');
                   // *** DEBUGGING & FIX: Add robust checks and clear logging ***
                   console.log("Raw image response from server:", imageResponse);
                   console.log("Raw analysis response from server:", heatmapData);
@@ -124,6 +183,7 @@
                   const analysisData = heatmapData.analysis_data;
   
                   console.log("Data received and validated. Rendering results...");
+                  await updateLoadingText('Rendering analysis results...');
                   $loader.hide();
   
                   // 4. Render results for each frame
@@ -174,6 +234,18 @@
                               naturalHeight: imgNaturalHeight,
                               src: $image.attr('src')
                           });
+
+                          // Get the container's dimensions
+                          const container = document.getElementById(`heatmap-container-${safeId}`);
+                          const containerWidth = container.offsetWidth;
+                          const containerHeight = container.offsetHeight;
+                          console.log('Container dimensions:', { width: containerWidth, height: containerHeight });
+
+                          // Calculate the scaling factor between Figma frame and actual image
+                          const scaleX = imgNaturalWidth / frame.node.absoluteBoundingBox.width;
+                          const scaleY = imgNaturalHeight / frame.node.absoluteBoundingBox.height;
+                          console.log('Scaling factors:', { scaleX, scaleY });
+
                           renderHeatmap(frameAnalysis.heatmap, `heatmap-container-${safeId}`, imgNaturalWidth, imgNaturalHeight);
                           renderSuggestions(frameAnalysis.suggestions, this, `heatmap-container-${safeId}`, imgNaturalWidth, imgNaturalHeight);
                       }).on('error', function(e) {
@@ -202,7 +274,6 @@
           function renderHeatmap(data, containerId, imgWidth, imgHeight) {
               console.log('Rendering heatmap with data:', data);
               console.log('Container ID:', containerId);
-              console.log('Image dimensions:', { width: imgWidth, height: imgHeight });
               
               if (!data || !Array.isArray(data)) {
                   console.warn('Invalid heatmap data:', data);
@@ -214,11 +285,6 @@
                   console.error('Container not found:', containerId);
                   return;
               }
-
-              // Get the container's dimensions
-              const containerWidth = container.offsetWidth;
-              const containerHeight = container.offsetHeight;
-              console.log('Container dimensions:', { width: containerWidth, height: containerHeight });
 
               // Create heatmap instance with proper configuration
               const heatmapInstance = h337.create({
@@ -234,14 +300,14 @@
                   }
               });
 
-              // Scale the coordinates to match the container size
+              // Use coordinates directly as percentages
               const formattedData = data.map(pt => ({
-                  x: Math.round((pt.x / imgWidth) * containerWidth),
-                  y: Math.round((pt.y / imgHeight) * containerHeight),
+                  x: pt.x,
+                  y: pt.y,
                   value: pt.intensity || 1
               }));
 
-              console.log('Formatted heatmap data:', formattedData);
+              console.log('Heatmap data (using coordinates directly):', formattedData);
 
               // Set the data with proper max value
               heatmapInstance.setData({
@@ -252,22 +318,29 @@
               console.log('Heatmap rendered successfully');
           }
           
-          function renderSuggestions(suggestions, imgElement, containerId) {
+          function renderSuggestions(suggestions, imgElement, containerId, imgWidth, imgHeight) {
               if (!suggestions || !Array.isArray(suggestions)) return;
               const container = document.getElementById(containerId);
-              if (!container) return; // Add check for container existence
-              const imgNaturalWidth = imgElement.naturalWidth;
-              const imgNaturalHeight = imgElement.naturalHeight;
-  
+              if (!container) return;
+
+              console.log('Rendering suggestions:', suggestions);
+
               suggestions.forEach((s, idx) => {
                   const marker = document.createElement('div');
                   marker.className = 'ux-suggestion-marker';
-                  marker.style.left = `${(s.x / imgNaturalWidth) * 100}%`;
-                  marker.style.top = `${(s.y / imgNaturalHeight) * 100}%`;
-                  marker.style.transform = 'translate(-50%, -50%)';
+                  
+                  // Use coordinates directly as percentages
+                  marker.style.left = `${s.x}%`;
+                  marker.style.top = `${s.y}%`;
+                  
                   marker.title = s.suggestion;
                   marker.innerHTML = `<span>${idx + 1}</span>`;
-                  marker.onclick = (e) => { e.stopPropagation(); alert(`Suggestion #${idx+1}: ${s.suggestion}`); };
+                  marker.onclick = (e) => { 
+                      e.stopPropagation(); 
+                      alert(`Suggestion #${idx+1}: ${s.suggestion}`); 
+                  };
+                  
+                  console.log('Adding marker at:', { x: s.x, y: s.y, suggestion: s.suggestion });
                   container.appendChild(marker);
               });
           }
