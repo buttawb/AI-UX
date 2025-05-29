@@ -182,7 +182,9 @@
                       analysisData = heatmapData;
                       throw new Error("The server response for AI analysis was invalid or missing the 'analysis_data' key.");
                   }
-                  analysisData = heatmapData.analysis_data;
+                  else {
+                    analysisData = heatmapData.analysis_data;
+                  }
                   console.log("Data received and validated. Rendering results...");
                   await updateLoadingText('Rendering analysis results...');
                   $loader.hide();
