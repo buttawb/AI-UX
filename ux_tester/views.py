@@ -145,26 +145,34 @@ def call_gemini_heatmap(figma_data):
     """
     Get UX analysis from Google's Gemini API using direct HTTP requests.
     """
-    prompt = f"""
-    As a UX/UI expert, analyze this Figma design JSON data and provide:
-    1. A heatmap of likely user interactions
-    2. A UX/UI critique
-    3. Specific improvement suggestions
-    
-    Design data: {json.dumps(figma_data)}
-    
-    Format response as JSON with these keys:
+    # This is the CORRECT prompt for the multi-frame version
+    prompt = """
+    You are a world-class UX/UI design expert. Analyze the provided Figma design JSON.
+    Your task is to analyze every top-level frame within the canvases.
+
+    For EACH frame, provide a detailed analysis. The final output must be a single, valid JSON object where each key is the frame's node ID.
+    The value for each key should be another JSON object with three keys: "heatmap", "report", and "suggestions".
+
+    Here is the Figma design data:
+    {}
+
+    Example of the required final JSON output structure:
     {{
-        "heatmap": [
-            {{"x": 123, "y": 456, "intensity": 0.9}}
-        ],
-        "report": "UX analysis text here",
-        "suggestions": [
-            {{"x": 150, "y": 400, "suggestion": "Improvement text"}}
-        ]
+        "analysis_data": {{
+            "3:15": {{
+                "heatmap": [...],
+                "report": "...",
+                "suggestions": [...]
+            }},
+            "4:2": {{
+                "heatmap": [...],
+                "report": "...",
+                "suggestions": [...]
+            }}
+        }}
     }}
-    Important: Output ONLY valid JSON with these three keys, no extra commentary. Ensure the JSON is well-formed.
-    """
+    Important: Respond ONLY with the valid JSON object described above.
+    """.format(json.dumps(figma_data))
 
     # Option 1: Try gemini-1.0-pro (often a good default for this endpoint)
     # model_name = "gemini-1.0-pro"
@@ -271,29 +279,37 @@ def extract_json_from_model_response(content): # Renamed from extract_json_from_
 
 
 @csrf_exempt
-def fetch_figma_image_url(request):
+def fetch_figma_image_urls(request):
     """
-    Fetch PNG image URL of a specific Figma node (frame) via Figma Image API.
+    NEW: Fetches PNG image URLs for a list of Figma nodes in a single request.
+    This is more efficient than fetching one by one.
     """
-    headers = {"X-Figma-Token": FIGMA_ACCESS_TOKEN}
-    # Ensure FIGMA_NODE_ID is URL-encoded if it contains special characters, though typically it doesn't.
-    url = f"https://api.figma.com/v1/images/{FIGMA_FILE_ID}?ids={FIGMA_NODE_ID}&format=png"
+    if request.method != 'POST':
+        return JsonResponse({"error": "POST request required."}, status=405)
 
     try:
-        response = requests.get(url, headers=headers, timeout=20) # Increased timeout for image rendering
+        data = json.loads(request.body)
+        node_ids = data.get('node_ids')
+        if not node_ids or not isinstance(node_ids, list):
+            return JsonResponse({"error": "Invalid or missing 'node_ids' list."}, status=400)
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON in request body."}, status=400)
+
+    # Figma API allows comma-separated list of node IDs
+    ids_query_param = ",".join(node_ids)
+    url = f"https://api.figma.com/v1/images/{FIGMA_FILE_ID}?ids={ids_query_param}&format=png&scale=2"
+    headers = {"X-Figma-Token": FIGMA_ACCESS_TOKEN}
+
+    try:
+        response = requests.get(url, headers=headers, timeout=60)
         response.raise_for_status()
+        
+        data = response.json()
+        if data.get("err"):
+            return JsonResponse({"error": f"Figma API error: {data['err']}"}, status=400)
+        
+        return JsonResponse({"image_urls": data.get("images", {})})
+
     except requests.RequestException as e:
-        return JsonResponse({"error": f"Failed to fetch image URL from Figma: {str(e)}"}, status=500)
-
-    data = response.json()
-    
-    if data.get("err"): # Figma API returns "err" for errors in the image rendering
-        return JsonResponse({"error": f"Figma API error for image: {data['err']}"}, status=400)
-
-    images = data.get("images", {})
-    image_url = images.get(FIGMA_NODE_ID)
-
-    if not image_url:
-        return JsonResponse({"error": "Image URL not found for given node ID in Figma response. Ensure node ID is correct and the frame is exportable."}, status=404)
-
-    return JsonResponse({"image_url": image_url})
+        print("INN EXCEPTION of fetch_figma_image_urls:", str(e))
+        return JsonResponse({"error": f"Failed to fetch image URLs from Figma: {str(e)}"}, status=500)
