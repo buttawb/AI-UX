@@ -201,12 +201,56 @@
             border-bottom: 2px solid var(--border);
             display: flex;
             align-items: center;
+            justify-content: space-between;
             gap: 0.5rem;
         }
 
         .frame-header::before {
             content: '🎨';
             font-size: 1.2em;
+        }
+
+        .ux-score-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius);
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            animation: scorePop 0.5s ease-out;
+        }
+
+        .ux-score-container.excellent {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+        }
+
+        .ux-score-container.good {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+        }
+
+        .ux-score-container.fair {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+        }
+
+        .ux-score-container.poor {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+        }
+
+        .ux-score-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+
+        @keyframes scorePop {
+            0% { transform: scale(0.8); opacity: 0; }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
         }
 
         .analysis-content {
@@ -546,9 +590,32 @@
   
                       // Create the HTML structure for this frame
                       const safeId = frame.id.replace(/:/g, '-');
+                      const uxScore = frameAnalysis.ux_score || 0;
+                      
+                      // Determine score category and emoji
+                      let scoreClass = 'poor';
+                      let scoreEmoji = '😢';
+                      if (uxScore >= 90) {
+                          scoreClass = 'excellent';
+                          scoreEmoji = '🌟';
+                      } else if (uxScore >= 75) {
+                          scoreClass = 'good';
+                          scoreEmoji = '👍';
+                      } else if (uxScore >= 60) {
+                          scoreClass = 'fair';
+                          scoreEmoji = '🤔';
+                      }
+                      
                       const frameHtml = `
                           <div class="frame-container" id="frame-container-${safeId}">
-                              <div class="frame-header">${frame.name}</div>
+                              <div class="frame-header">
+                                  <span>${frame.name}</span>
+                                  <div class="ux-score-container ${scoreClass}">
+                                      <span>${scoreEmoji}</span>
+                                      <span class="ux-score-value">${uxScore}</span>
+                                      <span>UX Score</span>
+                                  </div>
+                              </div>
                               <div class="analysis-content">
                                   <div class="design-column">
                                       <div class="heatmap-container" id="heatmap-container-${safeId}">

@@ -10,7 +10,7 @@ import re
 DEFAULT_FIGMA_FILE_ID = '1J2MSZzASUTEKNrrQm5o8b'
 FIGMA_ACCESS_TOKEN = 'figd_8KqZh4idtJM7bfuJ8AXSoTAGyJ_n42hLZwgNVUx8'
 RAMSHA_FIGMA_ACCESS_TOKEN = 'figd_3bgofXhJbrbVRuPxlaXmrH-AwL6RTdr9hW1PLydz'
-OPENAI_API_KEY = "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"
+OPENAI_API_KEY = "sk-proj-TqTaxIMCk6fsrNcaGXE1yF-PehXerkG-e4EJaqGft33i13RlRJq_xRmiV_lGQUHdpQO3 5kxXhaT3BlbkFJ1xfcvTfnnPxsuNGzvhLdYBU25sc-VgK4QA7IhR0KdBWkqiijTRGjbsp1-zqKJnObr6lkftWyUA"
 TEMP_TOKEN = "328267-66c5803b-80d4-4989-ad6f-8430d60fb714"
 
 # Base prompt template that will be used for both OpenAI and Gemini
@@ -21,7 +21,7 @@ Your task is to analyze ONLY the frames with the following node IDs and their di
 {user_prompt_section}
 
 For EACH of these specific frames, provide a detailed analysis. The final output must be a single, valid JSON object where each key is one of the frame's node IDs listed above.
-The value for each key should be another JSON object with three keys: "heatmap", "report", and "suggestions".
+The value for each key should be another JSON object with four keys: "heatmap", "report", "suggestions", and "ux_score".
 
 IMPORTANT: For coordinates in heatmap and suggestions:
 1. Use percentage-based coordinates (0-100) for both x and y values
@@ -31,18 +31,27 @@ IMPORTANT: For coordinates in heatmap and suggestions:
 5. DO NOT use pixel values, use percentages only
 6. Make sure there are at least 6 heatmap points and suggestions in a single node
 
+For the ux_score:
+- Calculate a score from 0-100 based on your analysis
+- Consider the number and severity of suggestions
+- Consider the heatmap distribution
+- Consider the overall design quality and user experience
+- Higher scores indicate better UX
+
 Example of the required final JSON output structure and make sure to follow it exactly:
 {{
     "analysis_data": {{
         "3:15": {{
             "heatmap":  [{{"x": 50, "y": 50, "intensity": 0.9}}],
             "report": "...",
-            "suggestions": [{{"x": 25, "y": 75, "suggestion": "Move button to bottom left"}}]
+            "suggestions": [{{"x": 25, "y": 75, "suggestion": "Move button to bottom left"}}],
+            "ux_score": 85
         }},
         "4:2": {{
             "heatmap":  [{{"x": 75, "y": 25, "intensity": 0.8}}],
             "report": "...",
-            "suggestions": [{{"x": 10, "y": 90, "suggestion": "Increase contrast in bottom left"}}]
+            "suggestions": [{{"x": 10, "y": 90, "suggestion": "Increase contrast in bottom left"}}],
+            "ux_score": 78
         }}
     }}
 }}
@@ -314,3 +323,4 @@ def fetch_figma_image_urls(request):
     except requests.RequestException as e:
         print("INN EXCEPTION of fetch_figma_image_urls:", str(e))
         return JsonResponse({"error": f"Failed to fetch image URLs from Figma: {str(e)}"}, status=500)
+
