@@ -165,8 +165,9 @@
                           data: JSON.stringify({ figma_data: figmaFileResponse.document }),
                       })
                   ]);
-                  const heatmapData = analysisResponse.heatmap_data;
-                  
+                  let heatmapData = analysisResponse.heatmap_data;
+                  let analysisData;
+
                   await updateLoadingText('Processing AI analysis results...');
                   // *** DEBUGGING & FIX: Add robust checks and clear logging ***
                   console.log("Raw image response from server:", imageResponse);
@@ -178,10 +179,10 @@
                   const imageUrls = imageResponse.image_urls;
   
                   if (!heatmapData || !heatmapData.analysis_data) {
+                      analysisData = heatmapData;
                       throw new Error("The server response for AI analysis was invalid or missing the 'analysis_data' key.");
                   }
-                  const analysisData = heatmapData.analysis_data;
-  
+                  analysisData = heatmapData.analysis_data;
                   console.log("Data received and validated. Rendering results...");
                   await updateLoadingText('Rendering analysis results...');
                   $loader.hide();
