@@ -160,14 +160,14 @@ def call_gemini_heatmap(figma_data):
     {{
         "analysis_data": {{
             "3:15": {{
-                "heatmap": [...],
+                "heatmap":  [{{"x": 123, "y": 456, "intensity": 0.9}}],
                 "report": "...",
                 "suggestions": [...]
             }},
             "4:2": {{
-                "heatmap": [...],
+                "heatmap":  [{{"x": 320, "y": 220, "suggestion": "Enlarge font size for readability."}}],
                 "report": "...",
-                "suggestions": [...]
+                "suggestions": [{{"x": 150, "y": 400, "suggestion": "Increase button contrast for better visibility."}}]
             }}
         }}
     }}
