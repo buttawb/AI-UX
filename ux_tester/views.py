@@ -36,7 +36,7 @@ def fetch_figma_file(request):
     url = f"https://api.figma.com/v1/files/{FIGMA_FILE_ID}"  # Using the hardcoded file ID
     response = requests.get(url, headers=headers)
 
-    print("DONEE")
+    print("DONEE fetch_figma_file")
     if response.status_code == 200:
         return JsonResponse(response.json())
     return JsonResponse({"error": "Failed to fetch Figma file."}, status=400)
@@ -51,6 +51,9 @@ def generate_heatmap(request):
         try:
             # heatmap_data = call_openai_heatmap(figma_data) # Can switch to OpenAI if needed
             heatmap_data = call_gemini_heatmap(figma_data)
+            print("heatmap")
+            print(heatmap_data)
+            print("End")
         except Exception as e:
             return JsonResponse({'error': f'Model call failed: {str(e)}'}, status=500)
 
@@ -174,7 +177,7 @@ def call_gemini_heatmap(figma_data):
     {json.dumps(figma_data)}
 
 
-    Example of the required final JSON output structure:
+    Example of the required final JSON output structure and make sure to follow it exactly:
     {{
         "analysis_data": {{
             "3:15": {{
@@ -194,6 +197,9 @@ def call_gemini_heatmap(figma_data):
 
     # Option 2: Try the latest 1.5 pro model
     model_name = "gemini-1.5-pro-latest"
+    model_name = "gemini-2.5-flash-preview-05-20"
+    model_name = "gemini-1.5-pro"
+    model_name = "gemini-2.0-flash"
 
     # Construct the API URL with the chosen model name
     gemini_api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={AVIALDO_GEMINI_KEY}"
