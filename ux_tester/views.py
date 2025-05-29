@@ -6,14 +6,50 @@ from django.views.decorators.csrf import csrf_exempt
 from .gemini_keys import AVIALDO_GEMINI_KEY  # Ensure you have this file with your API key
 import re
 
-# Hardcoded Figma file ID
-FIGMA_FILE_ID = '1J2MSZzASUTEKNrrQm5o8b'
+# Default Figma file ID (will be overridden by user input)
+DEFAULT_FIGMA_FILE_ID = '1J2MSZzASUTEKNrrQm5o8b'
 FIGMA_ACCESS_TOKEN = 'figd_8KqZh4idtJM7bfuJ8AXSoTAGyJ_n42hLZwgNVUx8'
 RAMSHA_FIGMA_ACCESS_TOKEN = 'figd_3bgofXhJbrbVRuPxlaXmrH-AwL6RTdr9hW1PLydz'
 OPENAI_API_KEY = "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"
 TEMP_TOKEN = "328267-66c5803b-80d4-4989-ad6f-8430d60fb714"
-FIGMA_NODE_ID = '0:1'
 
+# Base prompt template that will be used for both OpenAI and Gemini
+BASE_PROMPT_TEMPLATE = """
+You are a world-class UX/UI design expert. Analyze the provided Figma design JSON.
+Your task is to analyze ONLY the frames with the following node IDs and their dimensions: {frame_data}
+
+{user_prompt_section}
+
+For EACH of these specific frames, provide a detailed analysis. The final output must be a single, valid JSON object where each key is one of the frame's node IDs listed above.
+The value for each key should be another JSON object with three keys: "heatmap", "report", and "suggestions".
+
+IMPORTANT: For coordinates in heatmap and suggestions:
+1. Use percentage-based coordinates (0-100) for both x and y values
+2. x: 0 means left edge, 100 means right edge
+3. y: 0 means top edge, 100 means bottom edge
+4. Example: x: 50, y: 50 means center of the frame
+5. DO NOT use pixel values, use percentages only
+6. Make sure there are at least 6 heatmap points and suggestions in a single node
+
+Example of the required final JSON output structure and make sure to follow it exactly:
+{{
+    "analysis_data": {{
+        "3:15": {{
+            "heatmap":  [{{"x": 50, "y": 50, "intensity": 0.9}}],
+            "report": "...",
+            "suggestions": [{{"x": 25, "y": 75, "suggestion": "Move button to bottom left"}}]
+        }},
+        "4:2": {{
+            "heatmap":  [{{"x": 75, "y": 25, "intensity": 0.8}}],
+            "report": "...",
+            "suggestions": [{{"x": 10, "y": 90, "suggestion": "Increase contrast in bottom left"}}]
+        }}
+    }}
+}}
+
+Here is the Figma design data:
+{figma_data}
+"""
 
 @csrf_exempt
 def upload_design(request):
@@ -22,35 +58,36 @@ def upload_design(request):
     """
     return render(request, 'upload.html')
 
-
 @csrf_exempt
 def fetch_figma_file(request):
     """
-    Fetch the hardcoded Figma file data using the Figma API.
+    Fetch the Figma file data using the Figma API.
     """
+    file_id = request.GET.get('file_id', DEFAULT_FIGMA_FILE_ID)
+    
     url = "https://api.figma.com/v1/me"
     headers = {"X-Figma-Token": FIGMA_ACCESS_TOKEN}
 
-    response = requests.get(url, headers=headers) # This call to /v1/me seems to be for a health check or auth check but its result is not used.
-
-    url = f"https://api.figma.com/v1/files/{FIGMA_FILE_ID}"  # Using the hardcoded file ID
     response = requests.get(url, headers=headers)
 
-    print("DONEE fetch_figma_file")
+    url = f"https://api.figma.com/v1/files/{file_id}"
+    response = requests.get(url, headers=headers)
+
+    print("DONE fetch_figma_file")
     if response.status_code == 200:
         return JsonResponse(response.json())
     return JsonResponse({"error": "Failed to fetch Figma file."}, status=400)
-
 
 @csrf_exempt
 def generate_heatmap(request):
     if request.method == 'POST':
         data = json.loads(request.body)
         figma_data = data.get('figma_data')
+        user_prompt = data.get('user_prompt', '')
 
         try:
-            # heatmap_data = call_openai_heatmap(figma_data) # Can switch to OpenAI if needed
-            heatmap_data = call_gemini_heatmap(figma_data)
+            # heatmap_data = call_openai_heatmap(figma_data, user_prompt) # Can switch to OpenAI if needed
+            heatmap_data = call_gemini_heatmap(figma_data, user_prompt)
             print("heatmap")
             print(heatmap_data)
             print("End")
@@ -61,71 +98,38 @@ def generate_heatmap(request):
 
     return JsonResponse({'error': 'Invalid request method.'}, status=405)
 
-
 @csrf_exempt
-def call_openai_heatmap(figma_data):
-    prompt = f"""
-    You are a UX/UI expert analyzing a digital design represented by the following Figma design JSON data.
+def call_openai_heatmap(figma_data, user_prompt=''):
+    # Extract frame data
+    frame_data = {}
+    for canvas in figma_data.get('children', []):
+        for frame in canvas.get('children', []):
+            if frame.get('type') == 'FRAME':
+                frame_data[frame.get('id')] = {
+                    'width': frame.get('absoluteBoundingBox', {}).get('width', 0),
+                    'height': frame.get('absoluteBoundingBox', {}).get('height', 0)
+                }
 
-    1. Provide a detailed critique of the design, including:
-    - Visual hierarchy clarity
-    - Button styles (color contrast, size, placement)
-    - Text readability (font size, color contrast)
-    - Layout consistency and spacing
-    - Any confusing or cluttered areas
-    - Accessibility issues (color blindness, focus states, etc.)
-    - Suggestions to improve user engagement and clarity
+    # Add user prompt section if provided
+    user_prompt_section = f"""
+    Additional User Instructions:
+    {user_prompt}
+    
+    Please incorporate these instructions while maintaining the required output structure.
+    """ if user_prompt else ""
 
-    2. Identify potential user behavior patterns on this design, such as:
-    - Areas likely to attract clicks or hovers
-    - Possible confusing flows or abandoned points
-    - Elements that might cause hesitation or repeated clicks
+    prompt = BASE_PROMPT_TEMPLATE.format(
+        frame_data=json.dumps(frame_data),
+        user_prompt_section=user_prompt_section,
+        figma_data=json.dumps(figma_data)
+    )
 
-    3. Return three separate outputs:
-
-    a) A JSON array of simulated user interaction points for a heatmap.
-        Each point should have:
-        - "x": horizontal coordinate (integer)
-        - "y": vertical coordinate (integer)
-        - "intensity": a float from 0 to 1 indicating the strength of interaction
-
-        Example:
-        [
-            {{"x": 123, "y": 456, "intensity": 0.9}},
-            {{"x": 200, "y": 300, "intensity": 0.5}}
-        ]
-
-    b) A detailed UX/UI report as plain text summarizing all observations and recommendations.
-
-    c) A JSON array of UX improvement suggestions, where each suggestion has:
-        - "x": horizontal coordinate (integer) indicating where the suggestion applies
-        - "y": vertical coordinate (integer)
-        - "suggestion": a short actionable suggestion for improvement (string)
-
-        Example:
-        [
-            {{"x": 150, "y": 400, "suggestion": "Increase button contrast for better visibility."}},
-            {{"x": 320, "y": 220, "suggestion": "Enlarge font size for readability."}}
-        ]
-
-    The Figma design data is:
-    {json.dumps(figma_data)}
-
-    Respond with a JSON object with exactly three keys:
-    {{
-    "heatmap": [/* JSON array of heatmap points */],
-    "report": "Your detailed UX/UI critique and recommendations here.",
-    "suggestions": [/* JSON array of suggestions with coordinates and text */]
-    }}
-
-    Important: Output ONLY valid JSON with these three keys, no extra commentary.
-    """
     headers = {
         'Authorization': f'Bearer {OPENAI_API_KEY}',
         'Content-Type': 'application/json',
     }
     openai_payload = {
-        "model": "gpt-4o",  # or "gpt-3.5-turbo"
+        "model": "gpt-4",  # or "gpt-3.5-turbo"
         "messages": [
             {"role": "system", "content": "You are a UX analyst and UI design expert."},
             {"role": "user", "content": prompt}
@@ -138,17 +142,17 @@ def call_openai_heatmap(figma_data):
     result = response.json()
 
     content = result["choices"][0]["message"]["content"]
-    print("OpenAI response content:", content)  # Debugging output
+    print("OpenAI response content:", content)
 
-    heatmap_report = extract_json_from_model_response(content) # Renamed for clarity
+    heatmap_report = extract_json_from_model_response(content)
     return heatmap_report
 
 @csrf_exempt
-def call_gemini_heatmap(figma_data):
+def call_gemini_heatmap(figma_data, user_prompt=''):
     """
     Get UX analysis from Google's Gemini API using direct HTTP requests.
     """
-    # Extract all frame IDs and their dimensions from the Figma data first
+    # Extract frame data
     frame_data = {}
     for canvas in figma_data.get('children', []):
         for frame in canvas.get('children', []):
@@ -158,55 +162,30 @@ def call_gemini_heatmap(figma_data):
                     'height': frame.get('absoluteBoundingBox', {}).get('height', 0)
                 }
 
-    # This is the CORRECT prompt for the multi-frame version
-    prompt = f"""
-    You are a world-class UX/UI design expert. Analyze the provided Figma design JSON.
-    Your task is to analyze ONLY the frames with the following node IDs and their dimensions: {json.dumps(frame_data)}
+    # Add user prompt section if provided
+    user_prompt_section = f"""
+    Additional User Instructions:
+    {user_prompt}
+    
+    Please incorporate these instructions while maintaining the required output structure.
+    """ if user_prompt else ""
 
-    For EACH of these specific frames, provide a detailed analysis. The final output must be a single, valid JSON object where each key is one of the frame's node IDs listed above.
-    The value for each key should be another JSON object with three keys: "heatmap", "report", and "suggestions".
+    prompt = BASE_PROMPT_TEMPLATE.format(
+        frame_data=json.dumps(frame_data),
+        user_prompt_section=user_prompt_section,
+        figma_data=json.dumps(figma_data)
+    )
 
-    IMPORTANT: For coordinates in heatmap and suggestions:
-    1. Use percentage-based coordinates (0-100) for both x and y values
-    2. x: 0 means left edge, 100 means right edge
-    3. y: 0 means top edge, 100 means bottom edge
-    4. Example: x: 50, y: 50 means center of the frame
-    5. DO NOT use pixel values, use percentages only
-    6. Make sure there are at least 6 heatmap points and suggestions in a single node
-
-    Example of the required final JSON output structure and make sure to follow it exactly:
-    {{
-        "analysis_data": {{
-            "3:15": {{
-                "heatmap":  [{{"x": 50, "y": 50, "intensity": 0.9}}],
-                "report": "...",
-                "suggestions": [{{"x": 25, "y": 75, "suggestion": "Move button to bottom left"}}]
-            }},
-            "4:2": {{
-                "heatmap":  [{{"x": 75, "y": 25, "intensity": 0.8}}],
-                "report": "...",
-                "suggestions": [{{"x": 10, "y": 90, "suggestion": "Increase contrast in bottom left"}}]
-            }}
-        }}
-    }}
-
-    Here is the Figma design data:
-    {json.dumps(figma_data)}
-
-    """
-
-    # Option 2: Try the latest 1.5 pro model
-    # Try models in order of preference, starting with the most capable
+    # Try models in order of preference
     model_names = [
-        "gemini-1.5-pro-latest",  # Latest version with potentially higher limits
-        "gemini-1.5-pro",         # Stable version
-        "gemini-2.0-flash",       # Fallback
+        "gemini-1.5-pro-latest",
+        "gemini-1.5-pro",
+        "gemini-2.0-flash",
     ]
     
     last_error = None
     for model_name in model_names:
         try:
-            # Construct the API URL with the chosen model name
             gemini_api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={AVIALDO_GEMINI_KEY}"
             
             headers = {
@@ -218,12 +197,12 @@ def call_gemini_heatmap(figma_data):
                     "parts": [{"text": prompt}]
                 }],
                 "generationConfig": {
-                    "temperature": 0.9,        # Increased for more creativity
-                    "topK": 60,               # Increased to allow more diverse vocabulary
-                    "topP": 0.98,             # Increased for more diverse responses
-                    "maxOutputTokens": 8192,   # Doubled for more detailed analysis
-                    "candidateCount": 1,       # Number of responses to generate
-                    "stopSequences": [],       # No early stopping
+                    "temperature": 0.9,
+                    "topK": 60,
+                    "topP": 0.98,
+                    "maxOutputTokens": 8192,
+                    "candidateCount": 1,
+                    "stopSequences": [],
                 }
             }
 
@@ -233,7 +212,6 @@ def call_gemini_heatmap(figma_data):
             
             response_json = response.json()
             if "candidates" in response_json and response_json["candidates"]:
-                # Success! Process the response
                 content_data = response_json["candidates"][0].get("content")
                 if not content_data or "parts" not in content_data or not content_data["parts"]:
                     continue
@@ -245,12 +223,10 @@ def call_gemini_heatmap(figma_data):
                 content = parts[0]["text"]
                 heatmap_report = extract_json_from_model_response(content)
                 
-                # Validate that only expected frame IDs are present in the response
                 if "analysis_data" in heatmap_report:
                     unexpected_frames = set(heatmap_report["analysis_data"].keys()) - set(frame_data.keys())
                     if unexpected_frames:
                         print(f"Warning: Response contains unexpected frame IDs: {unexpected_frames}")
-                        # Filter out unexpected frames
                         heatmap_report["analysis_data"] = {
                             k: v for k, v in heatmap_report["analysis_data"].items() 
                             if k in frame_data.keys()
@@ -273,11 +249,9 @@ def call_gemini_heatmap(figma_data):
             print(f"Error with model {model_name}: {str(e)}")
             continue
     
-    # If we get here, all models failed
     if last_error:
         raise Exception(f"All Gemini models failed. Last error: {str(last_error)}")
     raise Exception("All Gemini models failed without specific error information")
-
 
 def extract_json_from_model_response(content): # Renamed from extract_json_from_openai
     """
@@ -305,12 +279,10 @@ def extract_json_from_model_response(content): # Renamed from extract_json_from_
             print(f"No JSON object found with regex in content: '{cleaned}'")
             raise Exception(f"Could not decode JSON from model response and no JSON object found via regex. Original error: {e_direct}, Content: '{cleaned}'")
 
-
 @csrf_exempt
 def fetch_figma_image_urls(request):
     """
-    NEW: Fetches PNG image URLs for a list of Figma nodes in a single request.
-    This is more efficient than fetching one by one.
+    Fetches PNG image URLs for a list of Figma nodes in a single request.
     """
     if request.method != 'POST':
         return JsonResponse({"error": "POST request required."}, status=405)
@@ -318,14 +290,15 @@ def fetch_figma_image_urls(request):
     try:
         data = json.loads(request.body)
         node_ids = data.get('node_ids')
+        file_id = data.get('file_id', DEFAULT_FIGMA_FILE_ID)
+        
         if not node_ids or not isinstance(node_ids, list):
             return JsonResponse({"error": "Invalid or missing 'node_ids' list."}, status=400)
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON in request body."}, status=400)
 
-    # Figma API allows comma-separated list of node IDs
     ids_query_param = ",".join(node_ids)
-    url = f"https://api.figma.com/v1/images/{FIGMA_FILE_ID}?ids={ids_query_param}&format=png&scale=2"
+    url = f"https://api.figma.com/v1/images/{file_id}?ids={ids_query_param}&format=png&scale=2"
     headers = {"X-Figma-Token": FIGMA_ACCESS_TOKEN}
 
     try:
