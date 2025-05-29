@@ -314,19 +314,40 @@
             transform: translate(-50%, -50%);
         }
 
-        .ux-suggestion-marker:hover {
+        .ux-dropoff-marker {
+            position: absolute;
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            z-index: 10;
+            border: 2px solid white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            transform: translate(-50%, -50%);
+        }
+
+        .ux-suggestion-marker:hover,
+        .ux-dropoff-marker:hover {
             transform: translate(-50%, -50%) scale(1.2);
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
 
         .suggestion-popup {
-            position: absolute;
+            position: fixed;
             background: var(--surface);
             border-radius: var(--radius);
             padding: 1.5rem;
             box-shadow: var(--shadow);
             border: 1px solid var(--border);
-            z-index: 9999;
+            z-index: 99999;
             max-width: 300px;
             opacity: 0;
             transform: translateY(10px);
@@ -335,13 +356,31 @@
             --arrow-position: bottom;
         }
 
-        .suggestion-popup.active {
+        .dropoff-popup {
+            position: fixed;
+            background: #fee2e2;
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            border: 1px solid #fecaca;
+            z-index: 99999;
+            max-width: 300px;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+            --arrow-position: bottom;
+        }
+
+        .suggestion-popup.active,
+        .dropoff-popup.active {
             opacity: 1;
             transform: translateY(0);
             pointer-events: all;
         }
 
-        .suggestion-popup h3 {
+        .suggestion-popup h3,
+        .dropoff-popup h3 {
             color: var(--text);
             font-size: 1.1rem;
             font-weight: 600;
@@ -356,14 +395,25 @@
             font-size: 1.2em;
         }
 
-        .suggestion-popup p {
+        .dropoff-popup h3::before {
+            content: '⚠️';
+            font-size: 1.2em;
+        }
+
+        .suggestion-popup p,
+        .dropoff-popup p {
             color: var(--text-light);
             font-size: 0.95rem;
             line-height: 1.5;
             margin: 0;
         }
 
-        .suggestion-popup::after {
+        .dropoff-popup p {
+            color: #991b1b;
+        }
+
+        .suggestion-popup::after,
+        .dropoff-popup::after {
             content: '';
             position: absolute;
             left: 50%;
@@ -377,6 +427,13 @@
             bottom: var(--arrow-position) == 'top' ? -8px : auto;
             border-bottom: var(--arrow-position) == 'bottom' ? 8px solid var(--surface) : none;
             border-top: var(--arrow-position) == 'top' ? 8px solid var(--surface) : none;
+        }
+
+        .dropoff-popup::after {
+            top: var(--arrow-position) == 'bottom' ? -8px : auto;
+            bottom: var(--arrow-position) == 'top' ? -8px : auto;
+            border-bottom: var(--arrow-position) == 'bottom' ? 8px solid #fee2e2 : none;
+            border-top: var(--arrow-position) == 'top' ? 8px solid #fee2e2 : none;
         }
 
         @keyframes spin {
@@ -662,7 +719,7 @@
                           console.log('Scaling factors:', { scaleX, scaleY });
 
                           renderHeatmap(frameAnalysis.heatmap, `heatmap-container-${safeId}`, imgNaturalWidth, imgNaturalHeight);
-                          renderSuggestions(frameAnalysis.suggestions, this, `heatmap-container-${safeId}`, imgNaturalWidth, imgNaturalHeight);
+                          renderSuggestions(frameAnalysis, this, `heatmap-container-${safeId}`, imgNaturalWidth, imgNaturalHeight);
                       }).on('error', function(e) {
                           console.error(`Error loading image for frame ${frame.id}:`, e);
                       }).each(function() {
@@ -733,21 +790,26 @@
               console.log('Heatmap rendered successfully');
           }
           
-          function renderSuggestions(suggestions, imgElement, containerId, imgWidth, imgHeight) {
-              if (!suggestions || !Array.isArray(suggestions)) return;
+          function renderSuggestions(frameAnalysis, imgElement, containerId, imgWidth, imgHeight) {
+              if (!frameAnalysis || !frameAnalysis.suggestions || !Array.isArray(frameAnalysis.suggestions)) return;
               const container = document.getElementById(containerId);
               if (!container) return;
 
-              console.log('Rendering suggestions:', suggestions);
+              console.log('Rendering suggestions:', frameAnalysis.suggestions);
 
-              // Create popup element
-              const popup = document.createElement('div');
-              popup.className = 'suggestion-popup';
-              container.appendChild(popup); // Keep popup within container
+              // Create popup elements and append them to body instead of container
+              const suggestionPopup = document.createElement('div');
+              suggestionPopup.className = 'suggestion-popup';
+              document.body.appendChild(suggestionPopup);
+
+              const dropoffPopup = document.createElement('div');
+              dropoffPopup.className = 'dropoff-popup';
+              document.body.appendChild(dropoffPopup);
 
               let activeMarker = null;
 
-              suggestions.forEach((s, idx) => {
+              // Render suggestion markers
+              frameAnalysis.suggestions.forEach((s, idx) => {
                   const marker = document.createElement('div');
                   marker.className = 'ux-suggestion-marker';
                   
@@ -761,60 +823,83 @@
                       
                       // Toggle popup if clicking the same marker
                       if (activeMarker === marker) {
-                          popup.classList.remove('active');
+                          suggestionPopup.classList.remove('active');
                           activeMarker = null;
                           return;
                       }
                       
                       // Update popup content
-                      popup.innerHTML = `
+                      suggestionPopup.innerHTML = `
                           <h3>Suggestion #${idx + 1}</h3>
                           <p>${s.suggestion}</p>
                       `;
                       
-                      // Position popup relative to marker
-                      const markerRect = marker.getBoundingClientRect();
-                      const containerRect = container.getBoundingClientRect();
-                      const popupRect = popup.getBoundingClientRect();
-                      
-                      // Calculate position relative to container
-                      let top = markerRect.top - containerRect.top - popupRect.height - 10;
-                      let left = markerRect.left - containerRect.left - (popupRect.width / 2) + (markerRect.width / 2);
-                      
-                      // Adjust if popup would go off the top of the container
-                      if (top < 0) {
-                          top = markerRect.bottom - containerRect.top + 10;
-                          popup.style.setProperty('--arrow-position', 'top');
-                      } else {
-                          popup.style.setProperty('--arrow-position', 'bottom');
-                      }
-                      
-                      // Adjust if popup would go off the left of the container
-                      if (left < 0) {
-                          left = 0;
-                      }
-                      
-                      // Adjust if popup would go off the right of the container
-                      if (left + popupRect.width > containerRect.width) {
-                          left = containerRect.width - popupRect.width;
-                      }
-                      
-                      popup.style.top = `${top}px`;
-                      popup.style.left = `${left}px`;
+                      // Position popup at center of viewport
+                      const popupRect = suggestionPopup.getBoundingClientRect();
+                      suggestionPopup.style.top = `${(window.innerHeight - popupRect.height) / 2}px`;
+                      suggestionPopup.style.left = `${(window.innerWidth - popupRect.width) / 2}px`;
                       
                       // Show popup
-                      popup.classList.add('active');
+                      suggestionPopup.classList.add('active');
+                      dropoffPopup.classList.remove('active');
                       activeMarker = marker;
                   };
                   
-                  console.log('Adding marker at:', { x: s.x, y: s.y, suggestion: s.suggestion });
+                  console.log('Adding suggestion marker at:', { x: s.x, y: s.y, suggestion: s.suggestion });
                   container.appendChild(marker);
               });
 
-              // Close popup when clicking outside
+              // Render drop-off markers if they exist
+              if (frameAnalysis && frameAnalysis.drop_off_points) {
+                  console.log('Found drop-off points:', frameAnalysis.drop_off_points);
+                  frameAnalysis.drop_off_points.forEach((d, idx) => {
+                      const marker = document.createElement('div');
+                      marker.className = 'ux-dropoff-marker';
+                      
+                      marker.style.left = `${d.x}%`;
+                      marker.style.top = `${d.y}%`;
+                      
+                      marker.innerHTML = `<span>⚠️</span>`;
+                      
+                      marker.onclick = (e) => { 
+                          e.stopPropagation();
+                          
+                          // Toggle popup if clicking the same marker
+                          if (activeMarker === marker) {
+                              dropoffPopup.classList.remove('active');
+                              activeMarker = null;
+                              return;
+                          }
+                          
+                          // Update popup content
+                          dropoffPopup.innerHTML = `
+                              <h3>Drop-off Point #${idx + 1}</h3>
+                              <p>${d.reason}</p>
+                          `;
+                          
+                          // Position popup at center of viewport
+                          const popupRect = dropoffPopup.getBoundingClientRect();
+                          dropoffPopup.style.top = `${(window.innerHeight - popupRect.height) / 2}px`;
+                          dropoffPopup.style.left = `${(window.innerWidth - popupRect.width) / 2}px`;
+                          
+                          // Show popup
+                          dropoffPopup.classList.add('active');
+                          suggestionPopup.classList.remove('active');
+                          activeMarker = marker;
+                      };
+                      
+                      console.log('Adding drop-off marker at:', { x: d.x, y: d.y, reason: d.reason });
+                      container.appendChild(marker);
+                  });
+              } else {
+                  console.log('No drop-off points found in frame analysis');
+              }
+
+              // Close popups when clicking outside
               document.addEventListener('click', (e) => {
-                  if (!e.target.closest('.ux-suggestion-marker')) {
-                      popup.classList.remove('active');
+                  if (!e.target.closest('.ux-suggestion-marker') && !e.target.closest('.ux-dropoff-marker')) {
+                      suggestionPopup.classList.remove('active');
+                      dropoffPopup.classList.remove('active');
                       activeMarker = null;
                   }
               });
