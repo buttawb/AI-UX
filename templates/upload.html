@@ -160,8 +160,8 @@
                       // $(`#image-${frame.id}`).on('load', function() {
                           const $image = $(this);
 
-                          renderHeatmap(frameAnalysis.heatmap, `heatmap-layer-${frame.id}`);
-                          renderSuggestions(frameAnalysis.suggestions, this, `heatmap-layer-${frame.id}`);
+                          renderHeatmap(frameAnalysis.heatmap, `heatmap-container-${frame.id}`);
+                          renderSuggestions(frameAnalysis.suggestions, this, `heatmap-container-${frame.id}`);
                           $(`#report-${frame.id}`).text(frameAnalysis.report);
                       // }).each(function() {
                          // if (this.complete) $(this).trigger('load');
@@ -184,8 +184,13 @@
               if (!data || !Array.isArray(data)) return;
               const container = document.getElementById(containerId);
               if (!container) return; // Add check for container existence
+
+              console.log("FINAL RENDERING OF HEATMAP DATA:", data);
               const heatmapInstance = h337.create({ container: container, radius: 40, maxOpacity: 0.6, blur: 0.75 });
               const formattedData = data.map(pt => ({ x: pt.x, y: pt.y, value: pt.intensity ?? 1 }));
+              console.log("IAM HEATMAP DATA:", formattedData);
+              console.log("Heatmap instance created for container:", heatmapInstance);
+              console.log("CONtainer ID", containerId);
               heatmapInstance.setData({ max: 1, data: formattedData });
           }
           
