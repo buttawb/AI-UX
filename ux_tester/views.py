@@ -173,28 +173,23 @@ def call_gemini_heatmap(figma_data):
     Here is the Figma design data:
     {json.dumps(figma_data)}
 
+
     Example of the required final JSON output structure:
     {{
         "analysis_data": {{
             "3:15": {{
-                "heatmap":  [{{"x": 50, "y": 50, "intensity": 0.9}}],  // Center of frame
+                "heatmap":  [{{"x": 50, "y": 50, "intensity": 0.9}}],
                 "report": "...",
-                "suggestions": [{{"x": 25, "y": 75, "suggestion": "Move button to bottom left"}}]  // Bottom left quadrant
+                "suggestions": [{{"x": 25, "y": 75, "suggestion": "Move button to bottom left"}}]
             }},
             "4:2": {{
-                "heatmap":  [{{"x": 75, "y": 25, "intensity": 0.8}}],  // Top right quadrant
+                "heatmap":  [{{"x": 75, "y": 25, "intensity": 0.8}}],
                 "report": "...",
                 "suggestions": [{{"x": 10, "y": 90, "suggestion": "Increase contrast in bottom left"}}]
             }}
         }}
     }}
 
-    Important: 
-    1. ONLY analyze frames with IDs that are in the list provided above
-    2. DO NOT analyze any other frames or nodes
-    3. Respond ONLY with the valid JSON object described above
-    4. Each frame ID in your response must match one from the provided list
-    5. All coordinates MUST be percentages (0-100)
     """
 
     # Option 2: Try the latest 1.5 pro model
