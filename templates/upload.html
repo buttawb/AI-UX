@@ -797,16 +797,31 @@
 
               console.log('Rendering suggestions:', frameAnalysis.suggestions);
 
-              // Create popup elements and append them to body instead of container
+              // Create popup elements and append them to container instead of body
               const suggestionPopup = document.createElement('div');
               suggestionPopup.className = 'suggestion-popup';
-              document.body.appendChild(suggestionPopup);
+              suggestionPopup.style.position = 'absolute';
+              container.appendChild(suggestionPopup);
 
               const dropoffPopup = document.createElement('div');
               dropoffPopup.className = 'dropoff-popup';
-              document.body.appendChild(dropoffPopup);
+              dropoffPopup.style.position = 'absolute';
+              container.appendChild(dropoffPopup);
 
               let activeMarker = null;
+
+              // Function to center popup over the image container
+              function centerPopup(popup) {
+                  const containerRect = container.getBoundingClientRect();
+                  const popupRect = popup.getBoundingClientRect();
+                  
+                  // Calculate center position relative to the container
+                  const top = (containerRect.height - popupRect.height) / 2;
+                  const left = (containerRect.width - popupRect.width) / 2;
+                  
+                  popup.style.top = `${top}px`;
+                  popup.style.left = `${left}px`;
+              }
 
               // Render suggestion markers
               frameAnalysis.suggestions.forEach((s, idx) => {
@@ -834,10 +849,8 @@
                           <p>${s.suggestion}</p>
                       `;
                       
-                      // Position popup at center of viewport
-                      const popupRect = suggestionPopup.getBoundingClientRect();
-                      suggestionPopup.style.top = `${(window.innerHeight - popupRect.height) / 2}px`;
-                      suggestionPopup.style.left = `${(window.innerWidth - popupRect.width) / 2}px`;
+                      // Center popup over the image container
+                      centerPopup(suggestionPopup);
                       
                       // Show popup
                       suggestionPopup.classList.add('active');
@@ -877,10 +890,8 @@
                               <p>${d.reason}</p>
                           `;
                           
-                          // Position popup at center of viewport
-                          const popupRect = dropoffPopup.getBoundingClientRect();
-                          dropoffPopup.style.top = `${(window.innerHeight - popupRect.height) / 2}px`;
-                          dropoffPopup.style.left = `${(window.innerWidth - popupRect.width) / 2}px`;
+                          // Center popup over the image container
+                          centerPopup(dropoffPopup);
                           
                           // Show popup
                           dropoffPopup.classList.add('active');
