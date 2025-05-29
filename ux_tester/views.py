@@ -172,6 +172,7 @@ def call_gemini_heatmap(figma_data):
     3. y: 0 means top edge, 100 means bottom edge
     4. Example: x: 50, y: 50 means center of the frame
     5. DO NOT use pixel values, use percentages only
+    6. Make sure there are at least 6 heatmap points and suggestions in a single node
 
     Example of the required final JSON output structure and make sure to follow it exactly:
     {{
