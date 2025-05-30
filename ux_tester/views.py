@@ -212,6 +212,19 @@ def call_gemini_heatmap(figma_data, user_prompt=''):
         "gemini-1.5-pro-latest",
         "gemini-1.5-pro",
         "gemini-2.0-flash",
+        "gemini-2.5-flash-preview-05-20",
+        "gemini-2.5-flash-preview-tts",
+        "gemini-2.5-pro-preview-05-06",
+        "gemini-2.5-pro-preview-tts",
+        "gemini-2.0-flash",
+        "gemini-2.0-flash-preview-image-generation",
+        "gemini-2.0-flash-lite",
+        "gemini-1.5-flash",
+        "gemini-1.5-flash-8b",
+        "veo-2.0-generate-001",
+        "gemini-2.0-flash-live-001",
+        "gemini-2.5-flash-exp-native-audio-thinking-dialog",
+        "gemini-2.5-flash-preview-native-audio-dialog",
     ]
     
     last_error = None
