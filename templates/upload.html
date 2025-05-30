@@ -200,8 +200,14 @@
                               <div class="analysis-content">
                                   <div class="design-column">
                                       <div class="visualization-controls">
-                                          <button class="viz-toggle-btn heatmap-btn active" data-target="heatmap" data-frame="${safeId}">UX Heatmap</button>
-                                          <button class="viz-toggle-btn reach-btn" data-target="reach" data-frame="${safeId}">Finger Reach</button>
+                                          <label class="viz-toggle-container">
+                                              <input type="checkbox" class="viz-toggle-checkbox" data-target="heatmap" data-frame="${safeId}" checked>
+                                              <span class="viz-toggle-btn heatmap-btn">🔥 UX Heatmap</span>
+                                          </label>
+                                          <label class="viz-toggle-container">
+                                              <input type="checkbox" class="viz-toggle-checkbox" data-target="reach" data-frame="${safeId}">
+                                              <span class="viz-toggle-btn reach-btn">👆 Finger Reach</span>
+                                          </label>
                                       </div>
                                       <div class="heatmap-container" id="heatmap-container-${safeId}">
                                           <img id="image-${safeId}" src="${imageUrl}" alt="Design for ${frame.name}" onerror="console.error('Image failed to load:', this.src)" />
@@ -683,7 +689,7 @@
                       centerX, bottomY, 0,
                       centerX, bottomY, containerHeight * 0.4
                   );
-                  easyReachGradient.addColorStop(0, 'rgba(46, 213, 115, 0.6)'); // Green
+                  easyReachGradient.addColorStop(0, 'rgba(46, 213, 115, 0.5)'); // Green
                   easyReachGradient.addColorStop(1, 'rgba(46, 213, 115, 0)');
                   
                   // Stretch zone (yellow) - approx 70% of screen from bottom
@@ -691,7 +697,7 @@
                       centerX, bottomY, containerHeight * 0.4,
                       centerX, bottomY, containerHeight * 0.7
                   );
-                  stretchReachGradient.addColorStop(0, 'rgba(255, 204, 0, 0.6)'); // Yellow
+                  stretchReachGradient.addColorStop(0, 'rgba(255, 204, 0, 0.5)'); // Yellow
                   stretchReachGradient.addColorStop(1, 'rgba(255, 204, 0, 0)');
                   
                   // Difficult zone (red) - rest of the screen
@@ -699,7 +705,7 @@
                       centerX, bottomY, containerHeight * 0.7,
                       centerX, bottomY, containerHeight
                   );
-                  hardReachGradient.addColorStop(0, 'rgba(231, 76, 60, 0.6)'); // Red
+                  hardReachGradient.addColorStop(0, 'rgba(231, 76, 60, 0.5)'); // Red
                   hardReachGradient.addColorStop(1, 'rgba(231, 76, 60, 0)');
                   
                   // Render the zones from hardest to easiest reach
@@ -799,39 +805,44 @@
               console.log('==== FINGER REACH CHART GENERATION COMPLETE ====');
           }
           
-          // Set up event listeners for visualization toggle buttons
-          $(document).on('click', '.viz-toggle-btn', function() {
+          // Set up event listeners for visualization toggle checkboxes
+          $(document).on('change', '.viz-toggle-checkbox', function() {
               const frameId = $(this).data('frame');
               const target = $(this).data('target');
-              
-              // Update active button state
-              $(this).siblings().removeClass('active');
-              $(this).addClass('active');
+              const isChecked = $(this).prop('checked');
               
               const container = $(`#heatmap-container-${frameId}`);
               
               if (target === 'heatmap') {
-                  container.find('.reach-layer').removeClass('active');
-                  container.find('.heatmap-layer').addClass('active');
+                  if (isChecked) {
+                      container.find('.heatmap-layer').addClass('active');
+                  } else {
+                      container.find('.heatmap-layer').removeClass('active');
+                  }
               } else if (target === 'reach') {
-                  container.find('.heatmap-layer').removeClass('active');
-                  container.find('.reach-layer').addClass('active');
-                  
-                  // Get container dimensions
-                  const containerWidth = container.width();
-                  const containerHeight = container.height();
-                  
-                  // Determine orientation based on aspect ratio
-                  const orientation = containerWidth > containerHeight ? 'landscape' : 'portrait';
-                  
-                  // Render the finger reach chart if not already rendered
-                  renderFingerReachChart(`heatmap-container-${frameId}`, containerWidth, containerHeight, orientation);
+                  if (isChecked) {
+                      container.find('.reach-layer').addClass('active');
+                      
+                      // Get container dimensions
+                      const containerWidth = container.width();
+                      const containerHeight = container.height();
+                      
+                      // Determine orientation based on aspect ratio
+                      const orientation = containerWidth > containerHeight ? 'landscape' : 'portrait';
+                      
+                      // Render the finger reach chart if not already rendered
+                      renderFingerReachChart(`heatmap-container-${frameId}`, containerWidth, containerHeight, orientation);
+                  } else {
+                      container.find('.reach-layer').removeClass('active');
+                  }
               }
           });
           
           // Initialize default state - show heatmap layer
           $(document).ready(function() {
               $('.heatmap-layer').addClass('active');
+              // Ensure the heatmap checkbox is checked by default
+              $('.viz-toggle-checkbox[data-target="heatmap"]').prop('checked', true);
           });
       });
       </script>

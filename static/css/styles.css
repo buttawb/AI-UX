@@ -277,6 +277,22 @@ body {
     display: flex;
     margin-bottom: 1rem;
     gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.viz-toggle-container {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    margin-right: 0.5rem;
+}
+
+.viz-toggle-checkbox {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
 }
 
 .viz-toggle-btn {
@@ -288,16 +304,59 @@ body {
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    user-select: none;
 }
 
 .viz-toggle-btn:hover {
     background-color: var(--background);
 }
 
-.viz-toggle-btn.active {
-    background-color: var(--primary);
+.viz-toggle-btn::before {
+    content: "";
+    height: 1rem;
+    width: 1rem;
+    margin-right: 0.5rem;
+    border-radius: 4px;
+    border: 2px solid var(--secondary);
+    background-color: var(--surface);
+    display: inline-block;
+    transition: all 0.2s ease;
+}
+
+.viz-toggle-checkbox:checked + .viz-toggle-btn::before {
+    content: "✓";
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
     color: white;
-    border-color: var(--primary-dark);
+    line-height: 1;
+}
+
+.viz-toggle-checkbox:checked + .viz-toggle-btn.heatmap-btn::before {
+    background-color: #ff5722;
+    border-color: #e64a19;
+}
+
+.viz-toggle-checkbox:checked + .viz-toggle-btn.reach-btn::before {
+    background-color: #2196f3;
+    border-color: #1976d2;
+}
+
+.viz-toggle-checkbox:checked + .viz-toggle-btn.heatmap-btn {
+    background: linear-gradient(135deg, #ff9800, #ff5722);
+    color: white;
+    border-color: #e64a19;
+    box-shadow: 0 2px 5px rgba(230, 74, 25, 0.3);
+}
+
+.viz-toggle-checkbox:checked + .viz-toggle-btn.reach-btn {
+    background: linear-gradient(135deg, #03a9f4, #2196f3);
+    color: white;
+    border-color: #1976d2;
+    box-shadow: 0 2px 5px rgba(33, 150, 243, 0.3);
 }
 
 .heatmap-layer,
@@ -316,10 +375,12 @@ body {
 
 .heatmap-layer.active {
     display: block;
+    z-index: 5;
 }
 
 .reach-layer.active {
     display: block;
+    z-index: 6;
 }
 
 /* Style for the heatmap canvas */
