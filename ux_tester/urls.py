@@ -12,4 +12,8 @@ urlpatterns = [
     # Generate heatmap data from OpenAI model based on selected Figma file
     path('generate_heatmap/', views.generate_heatmap, name='generate_heatmap'),
     path('fetch_figma_image_urls/', views.fetch_figma_image_urls, name='fetch_figma_image_url'),
+
+    # New simulation routes
+    path('simulation/', views.simulation_view, name='simulation_view'),
+    path('generate_simulation/', views.generate_simulation, name='generate_simulation'),
 ]

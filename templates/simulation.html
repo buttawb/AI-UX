@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI UX Tester - User Journey Simulation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <style>
+        .simulation-container {
+            background-color: var(--surface);
+            padding: 2rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+            animation: slideUp 0.6s ease-out;
+            border: 1px solid var(--border);
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            justify-content: center;
+        }
+
+        .nav-button {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: var(--surface);
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .nav-button:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary);
+            box-shadow: var(--shadow);
+        }
+
+        .nav-button.active {
+            background: linear-gradient(135deg, var(--primary), #4f46e5);
+            color: white;
+            border-color: transparent;
+        }
+
+        .nav-button .icon {
+            font-size: 1.2rem;
+        }
+
+        .nav-button .badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin-left: 0.5rem;
+        }
+
+        .nav-button:not(.active) .badge {
+            background: var(--background);
+            color: var(--primary);
+        }
+
+        .input-method-selector {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .input-method-card {
+            background: var(--surface);
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .input-method-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary);
+            box-shadow: var(--shadow);
+        }
+
+        .input-method-card.active {
+            border-color: var(--primary);
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.05), rgba(79, 70, 229, 0.05));
+        }
+
+        .input-method-card .icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+
+        .input-method-card h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+        }
+
+        .input-method-card p {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            margin: 0;
+        }
+
+        .task-input-section {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .task-input-section h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text);
+        }
+
+        .task-suggestions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .task-suggestion-chip {
+            background: var(--background);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            color: var(--text);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .task-suggestion-chip:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            margin-top: 2rem;
+            border-radius: var(--radius);
+            overflow: hidden;
+            background: var(--background);
+            display: none;
+        }
+
+        .video-container.active {
+            display: block;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .video-container video {
+            width: 100%;
+            border-radius: var(--radius);
+        }
+
+        .video-controls {
+            position: absolute;
+            bottom: 1rem;
+            right: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 0.5rem;
+            border-radius: var(--radius);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .video-container:hover .video-controls {
+            opacity: 1;
+        }
+
+        .video-control-btn {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 4px;
+            transition: background 0.2s ease;
+        }
+
+        .video-control-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .file-upload-container {
+            position: relative;
+            margin-top: 1rem;
+        }
+
+        .file-upload-input {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .file-upload-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 1rem;
+            background: var(--background);
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            color: var(--text-light);
+            transition: all 0.2s ease;
+        }
+
+        .file-upload-label:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .file-upload-label .icon {
+            font-size: 1.5rem;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .loading-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .loading-content {
+            background: var(--surface);
+            padding: 2rem;
+            border-radius: var(--radius);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid var(--border);
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        .loading-text {
+            color: var(--text);
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .loading-subtext {
+            color: var(--text-light);
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>User Journey Simulation</h1>
+            <p>Watch AI simulate user interactions with your design to identify potential UX issues</p>
+        </div>
+
+        <div class="nav-buttons">
+            <a href="/ux/upload_design/" class="nav-button">
+                <span class="icon">📊</span>
+                <span>UX Analysis</span>
+                <span class="badge">Heatmap</span>
+            </a>
+            <a href="/ux/simulation/" class="nav-button active">
+                <span class="icon">🎬</span>
+                <span>User Journey</span>
+                <span class="badge">New!</span>
+            </a>
+        </div>
+
+        <div class="simulation-container">
+            <div class="input-method-selector">
+                <div class="input-method-card" data-method="figma">
+                    <div class="icon">🎨</div>
+                    <h3>Figma File</h3>
+                    <p>Enter your Figma file ID to analyze</p>
+                </div>
+                <div class="input-method-card" data-method="upload">
+                    <div class="icon">📁</div>
+                    <h3>Upload Design</h3>
+                    <p>Upload your design file directly</p>
+                </div>
+                <div class="input-method-card" data-method="url">
+                    <div class="icon">🔗</div>
+                    <h3>Design URL</h3>
+                    <p>Provide a URL to your design</p>
+                </div>
+            </div>
+
+            <div id="figmaInput" class="input-section">
+                <div class="form-group">
+                    <label for="figmaFileId">Figma File ID</label>
+                    <input type="text" id="figmaFileId" class="form-control" placeholder="Enter your Figma file ID">
+                    <small class="form-text">The unique identifier of your Figma file to analyze</small>
+                </div>
+            </div>
+
+            <div id="uploadInput" class="input-section" style="display: none;">
+                <div class="form-group">
+                    <label>Upload Design File</label>
+                    <div class="file-upload-container">
+                        <input type="file" id="designFile" class="file-upload-input" accept=".fig,.sketch,.xd">
+                        <label for="designFile" class="file-upload-label">
+                            <span class="icon">📁</span>
+                            <span>Click to upload or drag and drop</span>
+                        </label>
+                    </div>
+                    <small class="form-text">Supported formats: Figma (.fig), Sketch (.sketch), Adobe XD (.xd)</small>
+                </div>
+            </div>
+
+            <div id="urlInput" class="input-section" style="display: none;">
+                <div class="form-group">
+                    <label for="designUrl">Design URL</label>
+                    <input type="url" id="designUrl" class="form-control" placeholder="Enter the URL to your design">
+                    <small class="form-text">Provide a direct link to your design file</small>
+                </div>
+            </div>
+
+            <div class="task-input-section">
+                <h3>What would you like to simulate?</h3>
+                <div class="task-suggestions">
+                    <div class="task-suggestion-chip">Buy a product</div>
+                    <div class="task-suggestion-chip">Send a message</div>
+                    <div class="task-suggestion-chip">Create an account</div>
+                    <div class="task-suggestion-chip">Search for items</div>
+                    <div class="task-suggestion-chip">Complete checkout</div>
+                    <div class="task-suggestion-chip">Upload content</div>
+                </div>
+                <div class="form-group">
+                    <label for="taskDescription">Task Description</label>
+                    <textarea id="taskDescription" class="form-control" rows="3" placeholder="Describe the user journey you want to simulate..."></textarea>
+                    <small class="form-text">Be specific about the steps and goals of the user journey</small>
+                </div>
+            </div>
+
+            <button id="startSimulationBtn" class="form-control">Start Simulation</button>
+        </div>
+
+        <div class="video-container" id="simulationVideo">
+            <video id="simulationPlayer" loop>
+                <source src="" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+            <div class="video-controls">
+                <button class="video-control-btn" id="playPauseBtn">▶️</button>
+                <button class="video-control-btn" id="fullscreenBtn">⛶</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Generating Simulation</div>
+            <div class="loading-subtext">This may take a few minutes...</div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            const $inputMethods = $('.input-method-card');
+            const $inputSections = $('.input-section');
+            const $startBtn = $('#startSimulationBtn');
+            const $loadingOverlay = $('#loadingOverlay');
+            const $videoContainer = $('#simulationVideo');
+            const $video = $('#simulationPlayer');
+            const $playPauseBtn = $('#playPauseBtn');
+            const $fullscreenBtn = $('#fullscreenBtn');
+            const $taskChips = $('.task-suggestion-chip');
+
+            // Handle input method selection
+            $inputMethods.on('click', function() {
+                const method = $(this).data('method');
+                $inputMethods.removeClass('active');
+                $(this).addClass('active');
+                $inputSections.hide();
+                $(`#${method}Input`).show();
+            });
+
+            // Handle task suggestion chips
+            $taskChips.on('click', function() {
+                const task = $(this).text();
+                $('#taskDescription').val(task);
+            });
+
+            // Handle file upload
+            $('#designFile').on('change', function(e) {
+                const fileName = e.target.files[0]?.name;
+                if (fileName) {
+                    $(this).next('.file-upload-label').find('span:last').text(fileName);
+                }
+            });
+
+            // Handle simulation start
+            $startBtn.on('click', async function() {
+                const activeMethod = $('.input-method-card.active').data('method');
+                const taskDescription = $('#taskDescription').val();
+
+                if (!taskDescription) {
+                    alert('Please provide a task description');
+                    return;
+                }
+
+                let designData = null;
+                switch (activeMethod) {
+                    case 'figma':
+                        const figmaId = $('#figmaFileId').val();
+                        if (!figmaId) {
+                            alert('Please enter a Figma file ID');
+                            return;
+                        }
+                        designData = { type: 'figma', id: figmaId };
+                        break;
+                    case 'upload':
+                        const file = $('#designFile')[0].files[0];
+                        if (!file) {
+                            alert('Please upload a design file');
+                            return;
+                        }
+                        designData = { type: 'file', file: file };
+                        break;
+                    case 'url':
+                        const url = $('#designUrl').val();
+                        if (!url) {
+                            alert('Please enter a design URL');
+                            return;
+                        }
+                        designData = { type: 'url', url: url };
+                        break;
+                }
+
+                $loadingOverlay.addClass('active');
+                $startBtn.prop('disabled', true);
+
+                try {
+                    const response = await $.ajax({
+                        url: '/ux/generate_simulation/',
+                        method: 'POST',
+                        data: JSON.stringify({
+                            design_data: designData,
+                            task_description: taskDescription
+                        }),
+                        contentType: 'application/json'
+                    });
+
+                    if (response.video_url) {
+                        $video.attr('src', response.video_url);
+                        $videoContainer.addClass('active');
+                        $video[0].play();
+                    } else {
+                        throw new Error('No video URL in response');
+                    }
+                } catch (error) {
+                    alert('Failed to generate simulation: ' + error.message);
+                } finally {
+                    $loadingOverlay.removeClass('active');
+                    $startBtn.prop('disabled', false);
+                }
+            });
+
+            // Video controls
+            $playPauseBtn.on('click', function() {
+                if ($video[0].paused) {
+                    $video[0].play();
+                    $(this).text('⏸️');
+                } else {
+                    $video[0].pause();
+                    $(this).text('▶️');
+                }
+            });
+
+            $fullscreenBtn.on('click', function() {
+                if ($videoContainer[0].requestFullscreen) {
+                    $videoContainer[0].requestFullscreen();
+                } else if ($videoContainer[0].webkitRequestFullscreen) {
+                    $videoContainer[0].webkitRequestFullscreen();
+                } else if ($videoContainer[0].msRequestFullscreen) {
+                    $videoContainer[0].msRequestFullscreen();
+                }
+            });
+
+            // Video events
+            $video.on('play', function() {
+                $playPauseBtn.text('⏸️');
+            });
+
+            $video.on('pause', function() {
+                $playPauseBtn.text('▶️');
+            });
+        });
+    </script>
+</body>
+</html> 

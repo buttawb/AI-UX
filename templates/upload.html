@@ -16,6 +16,57 @@
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
 
+        .nav-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            justify-content: center;
+        }
+
+        .nav-button {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: var(--surface);
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .nav-button:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary);
+            box-shadow: var(--shadow);
+        }
+
+        .nav-button.active {
+            background: linear-gradient(135deg, var(--primary), #4f46e5);
+            color: white;
+            border-color: transparent;
+        }
+
+        .nav-button .icon {
+            font-size: 1.2rem;
+        }
+
+        .nav-button .badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin-left: 0.5rem;
+        }
+
+        .nav-button:not(.active) .badge {
+            background: var(--background);
+            color: var(--primary);
+        }
+
         .viz-controls-wrapper {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -241,6 +292,19 @@
         <div class="header">
             <h1>AI UX Tester</h1>
             <p>Transform your Figma designs into actionable UX insights with AI-powered analysis</p>
+        </div>
+
+        <div class="nav-buttons">
+            <a href="/ux/upload_design/" class="nav-button active">
+                <span class="icon">📊</span>
+                <span>UX Analysis</span>
+                <span class="badge">Heatmap</span>
+            </a>
+            <a href="/ux/simulation/" class="nav-button">
+                <span class="icon">🎬</span>
+                <span>User Journey</span>
+                <span class="badge">New!</span>
+            </a>
         </div>
 
         <div id="controls">

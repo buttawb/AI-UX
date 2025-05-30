@@ -1,0 +1,38 @@
+I can't directly create and return a base64-encoded MP4 video file.  I'm a text-based AI and don't have access to video editing software or the ability to interact with the real world in that way.  
+
+However, I *can* provide you with a detailed script and storyboard that you can use to create your video simulation in a tool like After Effects, Premiere Pro, Figma (with prototyping), or similar.  This script will follow your requirements for highlighting interactions, text overlays, timing, and UX analysis.
+
+**Storyboard and Script for "Setting and Changing User Data in Chat"**
+
+**(Video Resolution: 1280x720, Length: ~45 seconds)**
+
+* **Frame 1 (0-3 seconds):**  Splash Screen (Frame 80:1908). Text overlay: "User launches the app. Initial splash screen."
+
+* **Frame 2 (3-6 seconds):** Splash screen fades to main menu (Frame 80:1908, including footer). Text overlay: "Splash screen transitions to the main menu." UX Note: Consider a shorter splash screen duration for returning users.
+
+* **Frame 3 (6-9 seconds):**  Visual indicator (e.g., a red circle) appears on the "Direct Message" icon in the footer (Frame 80:2099). Text overlay: "User taps 'Direct Message' to start a chat."
+
+* **Frame 4 (9-15 seconds):** Transition to the chat setup screen (Frame 80:2157). Text overlay: "The chat requires user information before starting."
+
+* **Frame 5 (15-20 seconds):**  Visual indicator appears on the "Full Name" field. Text overlay: "User enters their full name."  Show the text being typed in realistically.
+
+* **Frame 6 (20-25 seconds):** Visual indicator appears on the "Email" field. Text overlay: "User enters their email address." Show the text being typed in.
+
+* **Frame 7 (25-28 seconds):** Visual indicator on the "Start Chat" button (Frame 80:2182). Text overlay: "User taps 'Start Chat'."
+
+* **Frame 8 (28-35 seconds):** Transition to the active chat screen (Frame 80:2266). Show the first automated welcome message. Text overlay: "Chat begins. User sees the welcome message."
+
+* **Frame 9 (35-40 seconds):** Visual indicator on the menu icon (Frame I80:2322;183:41). Text overlay: "Later, the user accesses the chat menu."
+
+* **Frame 10 (40-45 seconds):** The menu opens (I80:2418;183:46 is now visible). Visual indicator on "Change Name". Text overlay: "User can change their name and email from here." End screen.
+
+
+**UX Issues and Improvements (To be included as text overlays or voiceover at appropriate points):**
+
+* **Splash Screen:**  As mentioned, consider shortening the splash screen, especially if there's no need for extended loading.
+* **Chat Setup:**  The prompt to provide information before chatting might be disruptive.  Consider allowing users to start chatting immediately and only request info if they try to leave the chat or perform an action requiring it (e.g., saving the chat history).
+* **Menu:** The menu button (three dots) is small and could be easily missed. Consider a more prominent menu icon or a different method for accessing these options.
+* **Error Handling:**  The simulation doesn't show any error states (e.g., if the user enters an invalid email). These states should be designed and included in a full user journey.
+
+
+This storyboard and script provide the framework for creating your video. You'll need to implement it in video editing software, using the provided Figma design data to capture or recreate the screens and interactions. Remember to include a progress indicator in your final video to show the user's position in the journey.  Use smooth transitions and a professional visual style to create an engaging and informative UX simulation.
