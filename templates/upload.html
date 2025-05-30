@@ -6,6 +6,235 @@
     <title>AI UX Tester - Multi-Frame Analysis</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/styles.css">
+    <style>
+        .visualization-controls {
+            position: relative;
+            margin-bottom: 1rem;
+            padding: 0.5rem;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .viz-controls-wrapper {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+            width: 100%;
+        }
+
+        .viz-toggle-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+
+        .viz-toggle-checkbox {
+            position: absolute;
+            opacity: 0;
+            cursor: pointer;
+            height: 0;
+            width: 0;
+        }
+
+        .viz-toggle-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+            width: 100%;
+            text-align: center;
+        }
+
+        .viz-toggle-btn:hover {
+            background: #f8fafc;
+        }
+
+        .viz-toggle-btn .viz-icon {
+            font-size: 1.1em;
+        }
+
+        .viz-toggle-checkbox:checked + .viz-toggle-btn {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+        }
+
+        .viz-toggle-checkbox:checked + .viz-toggle-btn.heatmap-btn {
+            background: linear-gradient(135deg, #ff9800, #ff5722);
+            color: white;
+            border-color: #e64a19;
+        }
+
+        .viz-toggle-checkbox:checked + .viz-toggle-btn.reach-btn {
+            background: linear-gradient(135deg, #03a9f4, #2196f3);
+            color: white;
+            border-color: #1976d2;
+        }
+
+        .viz-toggle-checkbox:checked + .viz-toggle-btn.suggestions-btn {
+            background: linear-gradient(135deg, #4CAF50, #2E7D32);
+            color: white;
+            border-color: #1B5E20;
+        }
+
+        .viz-toggle-checkbox:checked + .viz-toggle-btn.dropoffs-btn {
+            background: linear-gradient(135deg, #F44336, #D32F2F);
+            color: white;
+            border-color: #B71C1C;
+        }
+
+        .heatmap-layer,
+        .reach-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+            border-radius: var(--radius);
+            overflow: hidden;
+            display: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .heatmap-layer.active,
+        .reach-layer.active {
+            display: block;
+        }
+
+        .ux-suggestion-marker,
+        .ux-dropoff-marker {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        .ux-suggestion-marker {
+            background: rgba(76, 175, 80, 0.9);
+            border: 2px solid #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .ux-dropoff-marker {
+            background: rgba(244, 67, 54, 0.9);
+            border: 2px solid #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .ux-suggestion-marker span,
+        .ux-dropoff-marker span {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+            line-height: 1;
+            text-align: center;
+            width: 100%;
+        }
+
+        .ux-dropoff-marker span {
+            font-size: 14px;
+        }
+
+        .ux-suggestion-marker.active,
+        .ux-dropoff-marker.active {
+            display: block;
+        }
+
+        .design-visualization {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 1rem;
+            align-items: start;
+        }
+
+        .heatmap-container {
+            position: relative;
+            border-radius: var(--radius);
+            overflow: hidden;
+            background-color: var(--background);
+            box-shadow: var(--shadow);
+            width: 100%;
+        }
+
+        .report-column {
+            width: 400px;
+            padding-left: 2rem;
+        }
+
+        .reach-legend {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+
+        .reach-legend.active {
+            display: block;
+        }
+
+        .reach-legend h4 {
+            margin: 0 0 1rem 0;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .legend-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .color-box {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+
+        .color-box.easy {
+            background: rgba(46, 213, 115, 1);
+        }
+
+        .color-box.stretch {
+            background: rgba(255, 204, 0, 1);
+        }
+
+        .color-box.hard {
+            background: rgba(231, 76, 60, 1);
+        }
+
+        .design-column {
+            flex: 1;
+            min-width: 0; /* Prevents flex item from overflowing */
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -199,14 +428,62 @@
                               </div>
                               <div class="analysis-content">
                                   <div class="design-column">
+                                      <div class="visualization-controls">
+                                          <div class="viz-controls-wrapper">
+                                              <label class="viz-toggle-container">
+                                                  <input type="checkbox" class="viz-toggle-checkbox" data-target="heatmap" data-frame="${safeId}">
+                                                  <span class="viz-toggle-btn heatmap-btn">
+                                                      <span class="viz-icon">🔥</span>
+                                                      <span class="viz-label">UX Heatmap</span>
+                                                  </span>
+                                              </label>
+                                              <label class="viz-toggle-container">
+                                                  <input type="checkbox" class="viz-toggle-checkbox" data-target="reach" data-frame="${safeId}">
+                                                  <span class="viz-toggle-btn reach-btn">
+                                                      <span class="viz-icon">👆</span>
+                                                      <span class="viz-label">Finger Reach</span>
+                                                  </span>
+                                              </label>
+                                              <label class="viz-toggle-container">
+                                                  <input type="checkbox" class="viz-toggle-checkbox" data-target="suggestions" data-frame="${safeId}">
+                                                  <span class="viz-toggle-btn suggestions-btn">
+                                                      <span class="viz-icon">💡</span>
+                                                      <span class="viz-label">Suggestions</span>
+                                                  </span>
+                                              </label>
+                                              <label class="viz-toggle-container">
+                                                  <input type="checkbox" class="viz-toggle-checkbox" data-target="dropoffs" data-frame="${safeId}">
+                                                  <span class="viz-toggle-btn dropoffs-btn">
+                                                      <span class="viz-icon">⚠️</span>
+                                                      <span class="viz-label">Drop-offs</span>
+                                                  </span>
+                                              </label>
+                                          </div>
+                                      </div>
                                       <div class="heatmap-container" id="heatmap-container-${safeId}">
                                           <img id="image-${safeId}" src="${imageUrl}" alt="Design for ${frame.name}" onerror="console.error('Image failed to load:', this.src)" />
                                           <div class="heatmap-layer" id="heatmap-layer-${safeId}"></div>
+                                          <div class="reach-layer" id="reach-layer-${safeId}"></div>
                                       </div>
                                   </div>
                                   <div class="report-column">
                                       <h2>UX/UI Report</h2>
                                       <div class="ux-report" id="report-${safeId}">${frameAnalysis.report}</div>
+                                      <div class="reach-legend" id="reach-legend-${safeId}">
+                                          <h4>Thumb Reach Zones</h4>
+                                          <div class="legend-item">
+                                              <div class="color-box easy"></div>
+                                              <span>Easy reach</span>
+                                          </div>
+                                          <div class="legend-item">
+                                              <div class="color-box stretch"></div>
+                                              <span>Stretch reach</span>
+                                          </div>
+                                          <div class="legend-item">
+                                              <div class="color-box hard"></div>
+                                              <span>Hard reach</span>
+                                          </div>
+                                      </div>
                                   </div>
                               </div>
                           </div>
@@ -540,6 +817,12 @@
 
               // Render suggestion markers
               frameAnalysis.suggestions.forEach((s, idx) => {
+                  // Skip if suggestion is empty, null, or undefined
+                  if (!s.suggestion || s.suggestion.trim() === '') {
+                      console.log(`Skipping empty suggestion marker at index ${idx}`);
+                      return;
+                  }
+
                   const marker = document.createElement('div');
                   marker.className = 'ux-suggestion-marker';
                   
@@ -581,6 +864,13 @@
               if (frameAnalysis && frameAnalysis.drop_off_points) {
                   console.log('Found drop-off points:', frameAnalysis.drop_off_points);
                   frameAnalysis.drop_off_points.forEach((d, idx) => {
+                      // Skip if both reason and suggestion are empty, null, or undefined
+                      const content = d.reason || d.suggestion;
+                      if (!content || content.trim() === '') {
+                          console.log(`Skipping empty dropoff marker at index ${idx}`);
+                          return;
+                      }
+
                       const marker = document.createElement('div');
                       marker.className = 'ux-dropoff-marker';
                       
@@ -602,7 +892,7 @@
                           // Update popup content
                           dropoffPopup.innerHTML = `
                               <h3>Drop-off Point #${idx + 1}</h3>
-                              <p>${d.reason}</p>
+                              <p>${content}</p>
                           `;
                           
                           // Center popup over the image container
@@ -614,7 +904,7 @@
                           activeMarker = marker;
                       };
                       
-                      console.log('Adding drop-off marker at:', { x: d.x, y: d.y, reason: d.reason });
+                      console.log('Adding drop-off marker at:', { x: d.x, y: d.y, content: content });
                       container.appendChild(marker);
                   });
               } else {
@@ -630,6 +920,186 @@
                   }
               });
           }
+          // Render mobile finger reach chart
+          function renderFingerReachChart(containerId, containerWidth, containerHeight, orientation = 'portrait') {
+              console.log('==== FINGER REACH CHART GENERATION START ====');
+              console.log('Rendering finger reach chart for container:', containerId);
+              console.log('Container dimensions:', { width: containerWidth, height: containerHeight });
+              
+              const container = document.getElementById(containerId);
+              if (!container) {
+                  console.error('ERROR: Container not found:', containerId);
+                  return;
+              }
+              
+              const reachLayer = container.querySelector('.reach-layer');
+              if (!reachLayer) {
+                  console.error('ERROR: Reach layer not found in container');
+                  return;
+              }
+              
+              // Clear any existing content
+              reachLayer.innerHTML = '';
+              
+              // Create a canvas element
+              const canvas = document.createElement('canvas');
+              canvas.width = containerWidth;
+              canvas.height = containerHeight;
+              canvas.style.position = 'absolute';
+              canvas.style.top = '0';
+              canvas.style.left = '0';
+              canvas.style.width = '100%';
+              canvas.style.height = '100%';
+              
+              // Add the canvas to the reach layer
+              reachLayer.appendChild(canvas);
+              
+              const ctx = canvas.getContext('2d');
+              
+              // Draw the reach zones based on orientation
+              if (orientation === 'portrait') {
+                  // Values are based on thumb reach research for average hand size
+                  // Bottom center is the reference point (thumb position)
+                  const centerX = containerWidth / 2;
+                  const bottomY = containerHeight;
+                  
+                  // Easy reach zone (green) - approx 40% of screen from bottom
+                  const easyReachGradient = ctx.createRadialGradient(
+                      centerX, bottomY, 0,
+                      centerX, bottomY, containerHeight * 0.4
+                  );
+                  easyReachGradient.addColorStop(0, 'rgba(46, 213, 115, 0.5)'); // Green
+                  easyReachGradient.addColorStop(1, 'rgba(46, 213, 115, 0)');
+                  
+                  // Stretch zone (yellow) - approx 70% of screen from bottom
+                  const stretchReachGradient = ctx.createRadialGradient(
+                      centerX, bottomY, containerHeight * 0.4,
+                      centerX, bottomY, containerHeight * 0.7
+                  );
+                  stretchReachGradient.addColorStop(0, 'rgba(255, 204, 0, 0.5)'); // Yellow
+                  stretchReachGradient.addColorStop(1, 'rgba(255, 204, 0, 0)');
+                  
+                  // Difficult zone (red) - rest of the screen
+                  const hardReachGradient = ctx.createRadialGradient(
+                      centerX, bottomY, containerHeight * 0.7,
+                      centerX, bottomY, containerHeight
+                  );
+                  hardReachGradient.addColorStop(0, 'rgba(231, 76, 60, 0.5)'); // Red
+                  hardReachGradient.addColorStop(1, 'rgba(231, 76, 60, 0)');
+                  
+                  // Render the zones from hardest to easiest reach
+                  ctx.fillStyle = hardReachGradient;
+                  ctx.fillRect(0, 0, containerWidth, containerHeight);
+                  
+                  ctx.fillStyle = stretchReachGradient;
+                  ctx.beginPath();
+                  ctx.arc(centerX, bottomY, containerHeight * 0.7, 0, Math.PI, true);
+                  ctx.fill();
+                  
+                  ctx.fillStyle = easyReachGradient;
+                  ctx.beginPath();
+                  ctx.arc(centerX, bottomY, containerHeight * 0.4, 0, Math.PI, true);
+                  ctx.fill();
+              } else {
+                  // Landscape mode - adjust for right thumb position
+                  const rightX = containerWidth;
+                  const centerY = containerHeight / 2;
+                  
+                  // Easy reach zone (green) - approx 40% of screen from right
+                  const easyReachGradient = ctx.createRadialGradient(
+                      rightX, centerY, 0,
+                      rightX, centerY, containerWidth * 0.4
+                  );
+                  easyReachGradient.addColorStop(0, 'rgba(46, 213, 115, 0.6)'); // Green
+                  easyReachGradient.addColorStop(1, 'rgba(46, 213, 115, 0)');
+                  
+                  // Stretch zone (yellow) - approx 70% of screen from right
+                  const stretchReachGradient = ctx.createRadialGradient(
+                      rightX, centerY, containerWidth * 0.4,
+                      rightX, centerY, containerWidth * 0.7
+                  );
+                  stretchReachGradient.addColorStop(0, 'rgba(255, 204, 0, 0.6)'); // Yellow
+                  stretchReachGradient.addColorStop(1, 'rgba(255, 204, 0, 0)');
+                  
+                  // Difficult zone (red) - rest of the screen
+                  const hardReachGradient = ctx.createRadialGradient(
+                      rightX, centerY, containerWidth * 0.7,
+                      rightX, centerY, containerWidth
+                  );
+                  hardReachGradient.addColorStop(0, 'rgba(231, 76, 60, 0.6)'); // Red
+                  hardReachGradient.addColorStop(1, 'rgba(231, 76, 60, 0)');
+                  
+                  // Render the zones from hardest to easiest reach
+                  ctx.fillStyle = hardReachGradient;
+                  ctx.fillRect(0, 0, containerWidth, containerHeight);
+                  
+                  ctx.fillStyle = stretchReachGradient;
+                  ctx.beginPath();
+                  ctx.arc(rightX, centerY, containerWidth * 0.7, -Math.PI/2, Math.PI/2, true);
+                  ctx.fill();
+                  
+                  ctx.fillStyle = easyReachGradient;
+                  ctx.beginPath();
+                  ctx.arc(rightX, centerY, containerWidth * 0.4, -Math.PI/2, Math.PI/2, true);
+                  ctx.fill();
+              }
+              
+              console.log('Finger reach chart rendered successfully');
+              console.log('==== FINGER REACH CHART GENERATION COMPLETE ====');
+          }
+          
+          // Set up event listeners for visualization toggle checkboxes
+          $(document).on('change', '.viz-toggle-checkbox', function() {
+              const frameId = $(this).data('frame');
+              const target = $(this).data('target');
+              const isChecked = $(this).prop('checked');
+              
+              const container = $(`#heatmap-container-${frameId}`);
+              
+              if (target === 'heatmap') {
+                  const heatmapLayer = container.find('.heatmap-layer');
+                  if (isChecked) {
+                      heatmapLayer.addClass('active');
+                  } else {
+                      heatmapLayer.removeClass('active');
+                  }
+              } else if (target === 'reach') {
+                  const reachLayer = container.find('.reach-layer');
+                  const reachLegend = $(`#reach-legend-${frameId}`);
+                  if (isChecked) {
+                      reachLayer.addClass('active');
+                      reachLegend.addClass('active');
+                      
+                      // Get container dimensions
+                      const containerWidth = container.width();
+                      const containerHeight = container.height();
+                      
+                      // Determine orientation based on aspect ratio
+                      const orientation = containerWidth > containerHeight ? 'landscape' : 'portrait';
+                      
+                      // Render the finger reach chart if not already rendered
+                      renderFingerReachChart(`heatmap-container-${frameId}`, containerWidth, containerHeight, orientation);
+                  } else {
+                      reachLayer.removeClass('active');
+                      reachLegend.removeClass('active');
+                  }
+              } else if (target === 'suggestions') {
+                  container.find('.ux-suggestion-marker').toggleClass('active', isChecked);
+              } else if (target === 'dropoffs') {
+                  container.find('.ux-dropoff-marker').toggleClass('active', isChecked);
+              }
+          });
+          
+          // Initialize default state - all layers and markers hidden
+          $(document).ready(function() {
+              $('.heatmap-layer').removeClass('active');
+              $('.reach-layer').removeClass('active');
+              $('.reach-legend').removeClass('active');
+              $('.ux-suggestion-marker').removeClass('active');
+              $('.ux-dropoff-marker').removeClass('active');
+              // Ensure all checkboxes are unchecked by default
+              $('.viz-toggle-checkbox').prop('checked', false);
+          });
       });
       </script>
 </body>
