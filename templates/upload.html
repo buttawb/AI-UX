@@ -17,7 +17,7 @@
         <div id="controls">
             <div class="form-group">
                 <label for="figmaFileId">Figma File ID</label>
-                <input type="text" id="figmaFileId" value="1J2MSZzASUTEKNrrQm5o8b" class="form-control" placeholder="Enter your Figma file ID">
+                <input type="text" id="figmaFileId" value="{{ figma_file_id }}" class="form-control" placeholder="Enter your Figma file ID">
                 <small class="form-text">The unique identifier of your Figma file to analyze</small>
             </div>
             <div class="form-group">
@@ -38,7 +38,19 @@
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/heatmap.js/2.0.2/heatmap.min.js"></script>
-
+    
+    <script>
+      // Check if heatmap.js is loaded correctly
+      document.addEventListener('DOMContentLoaded', function() {
+          console.log('DOM loaded, checking heatmap.js availability');
+          if (typeof h337 === 'undefined') {
+              console.error('ERROR: heatmap.js (h337) is not loaded properly!');
+          } else {
+              console.log('heatmap.js is loaded correctly:', h337);
+          }
+      });
+    </script>
+    
     <script>
       $(document).ready(function() {
           const $submitBtn = $('#submitBtn');
@@ -209,7 +221,7 @@
                       console.log('Image element found:', $image.length > 0);
                       
                       $image.on('load', function() {
-                          console.log(`Image load event triggered for frame ${frame.id}`);
+                          console.log(`==== IMAGE LOAD EVENT - FRAME ${frame.id} ====`);
                           const $image = $(this);
                           const imgNaturalWidth = $image[0].naturalWidth;
                           const imgNaturalHeight = $image[0].naturalHeight;
@@ -219,19 +231,116 @@
                               src: $image.attr('src')
                           });
 
-                          // Get the container's dimensions
+                          // Get the container
+                          console.log(`Getting heatmap container with ID: heatmap-container-${safeId}`);
                           const container = document.getElementById(`heatmap-container-${safeId}`);
-                          const containerWidth = container.offsetWidth;
-                          const containerHeight = container.offsetHeight;
-                          console.log('Container dimensions:', { width: containerWidth, height: containerHeight });
-
-                          // Calculate the scaling factor between Figma frame and actual image
-                          const scaleX = imgNaturalWidth / frame.node.absoluteBoundingBox.width;
-                          const scaleY = imgNaturalHeight / frame.node.absoluteBoundingBox.height;
-                          console.log('Scaling factors:', { scaleX, scaleY });
-
-                          renderHeatmap(frameAnalysis.heatmap, `heatmap-container-${safeId}`, imgNaturalWidth, imgNaturalHeight);
-                          renderSuggestions(frameAnalysis, this, `heatmap-container-${safeId}`, imgNaturalWidth, imgNaturalHeight);
+                          if (!container) {
+                              console.error(`ERROR: Container with ID heatmap-container-${safeId} not found!`);
+                              return;
+                          }
+                          console.log('Container found:', container);
+                          
+                          // Verify heatmap layer exists
+                          const heatmapLayer = container.querySelector('.heatmap-layer');
+                          console.log('Heatmap layer element:', heatmapLayer);
+                          
+                          // Verify heatmap data
+                          console.log('Heatmap data availability check:', {
+                              hasFrameAnalysis: !!frameAnalysis,
+                              hasHeatmapData: frameAnalysis && !!frameAnalysis.heatmap,
+                              heatmapDataLength: frameAnalysis && frameAnalysis.heatmap ? frameAnalysis.heatmap.length : 0
+                          });
+                          
+                          // Give time for the image to be fully rendered in the DOM
+                          console.log('Setting timeout to ensure image is fully rendered...');
+                          setTimeout(() => {
+                              console.log('Timeout completed, proceeding with heatmap rendering');
+                              const containerRect = container.getBoundingClientRect();
+                              const containerWidth = containerRect.width;
+                              const containerHeight = containerRect.height;
+                              console.log('Container dimensions after image load:', { width: containerWidth, height: containerHeight });
+                              
+                              // Check if dimensions are valid
+                              if (containerWidth <= 0 || containerHeight <= 0) {
+                                  console.error('ERROR: Invalid container dimensions, cannot render heatmap');
+                                  return;
+                              }
+                                                            
+                              // Clear any existing content
+                              if (heatmapLayer) {
+                                  heatmapLayer.innerHTML = '';
+                              }
+                              
+                              // Create a canvas element
+                              const canvas = document.createElement('canvas');
+                              canvas.width = containerWidth;
+                              canvas.height = containerHeight;
+                              canvas.style.position = 'absolute';
+                              canvas.style.top = '0';
+                              canvas.style.left = '0';
+                              canvas.style.width = '100%';
+                              canvas.style.height = '100%';
+                              canvas.style.pointerEvents = 'none';
+                              
+                              // Add the canvas to the heatmap layer
+                              heatmapLayer.appendChild(canvas);
+                              
+                              // Get the canvas context and draw the heatmap
+                              const ctx = canvas.getContext('2d');
+                              
+                              // Create a gradient background for the heatmap
+                              const gradient = ctx.createRadialGradient(
+                                  containerWidth * 0.5, containerHeight * 0.4, 5,
+                                  containerWidth * 0.5, containerHeight * 0.4, containerWidth * 0.5
+                              );
+                              gradient.addColorStop(0, 'rgba(255, 0, 0, 0.8)');
+                              gradient.addColorStop(0.2, 'rgba(255, 255, 0, 0.6)');
+                              gradient.addColorStop(0.4, 'rgba(0, 255, 255, 0.4)');
+                              gradient.addColorStop(1, 'rgba(0, 0, 255, 0)');
+                              
+                              ctx.fillStyle = gradient;
+                              ctx.fillRect(0, 0, containerWidth, containerHeight);
+                              
+                              // Add a few hotspot points
+                              const drawHotspot = (x, y, radius, intensity) => {
+                                  const gradient = ctx.createRadialGradient(
+                                      x, y, 0,
+                                      x, y, radius
+                                  );
+                                  gradient.addColorStop(0, `rgba(255, 0, 0, ${intensity})`);
+                                  gradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
+                                  
+                                  ctx.fillStyle = gradient;
+                                  ctx.beginPath();
+                                  ctx.arc(x, y, radius, 0, Math.PI * 2);
+                                  ctx.fill();
+                              };
+                              
+                              // Draw sample hotspots in various locations
+                            // Convert frameAnalysis.heatmap data to hotspots
+                            if (frameAnalysis && frameAnalysis.heatmap && Array.isArray(frameAnalysis.heatmap)) {
+                                frameAnalysis.heatmap.forEach(point => {
+                                    // Convert percentage coordinates to pixels
+                                    const x = (point.x / 100) * containerWidth;
+                                    const y = (point.y / 100) * containerHeight;
+                                    // Use point intensity or default to 0.7
+                                    const intensity = point.intensity || 0.7;
+                                    // Calculate radius based on intensity (30-60 pixels)
+                                    const radius = 30 + (intensity * 30);
+                                    drawHotspot(x, y, radius, intensity);
+                                });
+                            } 
+                              
+                              console.log('Canvas heatmap created successfully');
+                              
+                              // Skip the normal heatmap rendering
+                              // renderHeatmap(frameAnalysis.heatmap, `heatmap-container-${safeId}`, containerWidth, containerHeight);
+                              
+                              console.log('Heatmap rendering complete, now rendering suggestions...');
+                              renderSuggestions(frameAnalysis, this, `heatmap-container-${safeId}`, containerWidth, containerHeight);
+                              console.log('Suggestions rendering complete');
+                              console.log(`==== FRAME ${frame.id} RENDERING COMPLETE ====`);
+                          }, 100);
                       }).on('error', function(e) {
                           console.error(`Error loading image for frame ${frame.id}:`, e);
                       }).each(function() {
@@ -256,50 +365,144 @@
           });
   
           function renderHeatmap(data, containerId, imgWidth, imgHeight) {
-              console.log('Rendering heatmap with data:', data);
-              console.log('Container ID:', containerId);
+              console.log('==== HEATMAP GENERATION START ====');
+              console.log('Rendering heatmap for container:', containerId);
+              console.log('Heatmap raw data:', data);
+              console.log('Container dimensions:', { width: imgWidth, height: imgHeight });
+              
+              // Check if heatmap.js is available
+              if (typeof h337 === 'undefined') {
+                  console.error('ERROR: heatmap.js (h337) is not available. Cannot render heatmap.');
+                  return;
+              }
               
               if (!data || !Array.isArray(data)) {
-                  console.warn('Invalid heatmap data:', data);
+                  console.error('ERROR: Invalid heatmap data:', data);
                   return;
               }
               
               const container = document.getElementById(containerId);
               if (!container) {
-                  console.error('Container not found:', containerId);
+                  console.error('ERROR: Container not found:', containerId);
                   return;
               }
+              console.log('Container element found:', container);
 
+              // Clear any existing heatmap
+              console.log('Checking for existing heatmap layer...');
+              const existingHeatmap = container.querySelector('.heatmap-layer');
+              if (existingHeatmap) {
+                  console.log('Existing heatmap layer found, clearing it');
+                  existingHeatmap.innerHTML = '';
+              } else {
+                  console.log('No existing heatmap layer found');
+              }
+
+              // Get container dimensions
+              console.log('Getting container dimensions from DOM...');
+              const containerRect = container.getBoundingClientRect();
+              const containerWidth = containerRect.width;
+              const containerHeight = containerRect.height;
+              console.log('Actual container dimensions from DOM:', { width: containerWidth, height: containerHeight });
+              
               // Create heatmap instance with proper configuration
-              const heatmapInstance = h337.create({
-                  container: container,
-                  radius: 40,
-                  maxOpacity: 0.6,
-                  minOpacity: 0,
-                  blur: 0.75,
-                  gradient: {
-                      '.5': 'blue',
-                      '.8': 'red',
-                      '.95': 'white'
+              console.log('Creating heatmap.js instance with configuration...');
+              const radius = Math.min(containerWidth, containerHeight) * 0.1;
+              console.log('Calculated radius for heatmap:', radius);
+              
+              try {
+                  // Use the heatmap layer instead of the container for better positioning
+                  const heatmapLayer = container.querySelector('.heatmap-layer');
+                  console.log('Using heatmap layer for rendering:', heatmapLayer);
+                  
+                  const heatmapInstance = h337.create({
+                      container: heatmapLayer,
+                      radius: radius,
+                      maxOpacity: 0.6,
+                      minOpacity: 0,
+                      blur: 0.75,
+                      gradient: {
+                          '.5': 'blue',
+                          '.8': 'red',
+                          '.95': 'white'
+                      }
+                  });
+                  console.log('Heatmap instance created successfully');
+
+                  // Convert percentage-based coordinates to pixels
+                  console.log('Converting percentage coordinates to pixel values...');
+                  const formattedData = data.map((pt, index) => {
+                      // Convert percentage to pixel values
+                      const x = (pt.x / 100) * containerWidth;
+                      const y = (pt.y / 100) * containerHeight;
+                      
+                      console.log(`Point ${index}: ${pt.x}% → ${x}px, ${pt.y}% → ${y}px`);
+                      
+                      return {
+                          x: x,
+                          y: y,
+                          // Ensure intensity is between 0 and 1, default to 0.6 for visibility
+                          value: pt.intensity ? Math.min(Math.max(pt.intensity, 0.3), 1) : 0.6
+                      };
+                  });
+                  
+                  // Add data points if none exist (for testing)
+                  if (formattedData.length === 0) {
+                      console.log('No heatmap data points found, adding sample points for testing');
+                      // Add sample points across the container
+                      for (let i = 0; i < 10; i++) {
+                          formattedData.push({
+                              x: Math.random() * containerWidth,
+                              y: Math.random() * containerHeight,
+                              value: Math.random() * 0.5 + 0.5 // Value between 0.5 and 1
+                          });
+                      }
                   }
-              });
 
-              // Use coordinates directly as percentages
-              const formattedData = data.map(pt => ({
-                  x: pt.x,
-                  y: pt.y,
-                  value: pt.intensity || 1
-              }));
+                  console.log('All points converted to pixels:', formattedData);
 
-              console.log('Heatmap data (using coordinates directly):', formattedData);
-
-              // Set the data with proper max value
-              heatmapInstance.setData({
-                  max: 1,
-                  data: formattedData
-              });
-
-              console.log('Heatmap rendered successfully');
+                  // Set the data with proper max value
+                  console.log('Setting data to heatmap instance...');
+                  heatmapInstance.setData({
+                      max: 1,
+                      data: formattedData
+                  });
+                  
+                  // Adjust the configuration after setting data for better visibility
+                  console.log('Adjusting heatmap configuration for better visibility...');
+                  heatmapInstance.configure({
+                      radius: radius,
+                      maxOpacity: 0.8,
+                      minOpacity: 0.2,
+                      blur: 0.9,
+                      gradient: {
+                          '0.4': 'blue',
+                          '0.6': 'cyan',
+                          '0.7': 'lime',
+                          '0.8': 'yellow',
+                          '1.0': 'red'
+                      }
+                  });
+                  console.log('Data set to heatmap instance successfully');
+                  
+                  // Log DOM changes
+                  console.log('DOM after heatmap rendering:');
+                  console.log('- Canvas elements in container:', container.querySelectorAll('canvas').length);
+                  
+                  // Check if canvas was created
+                  const canvas = container.querySelector('canvas');
+                  if (canvas) {
+                      console.log('- Canvas dimensions:', { width: canvas.width, height: canvas.height });
+                  } else {
+                      console.warn('WARNING: No canvas element found after heatmap rendering');
+                  }
+                  
+                  console.log('Heatmap rendered successfully');
+              } catch (error) {
+                  console.error('ERROR during heatmap creation:', error);
+              }
+              
+              console.log('==== HEATMAP GENERATION COMPLETE ====');
           }
           
           function renderSuggestions(frameAnalysis, imgElement, containerId, imgWidth, imgHeight) {

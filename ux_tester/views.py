@@ -7,11 +7,13 @@ from .gemini_keys import AVIALDO_GEMINI_KEY  # Ensure you have this file with yo
 import re
 
 # Default Figma file ID (will be overridden by user input)
-DEFAULT_FIGMA_FILE_ID = '1J2MSZzASUTEKNrrQm5o8b'
-FIGMA_ACCESS_TOKEN = 'figd_8KqZh4idtJM7bfuJ8AXSoTAGyJ_n42hLZwgNVUx8'
+DEFAULT_FIGMA_FILE_ID = 'dl5VgCWMZwL3uRi9mIOMvX'
+FIGMA_ACCESS_TOKEN = 'figd_iVOxEWPrSYY0MFIOD06Btza3Z2ofcJvaPENMSNSB'
 RAMSHA_FIGMA_ACCESS_TOKEN = 'figd_3bgofXhJbrbVRuPxlaXmrH-AwL6RTdr9hW1PLydz'
 OPENAI_API_KEY = "sk-proj-TqTaxIMCk6fsrNcaGXE1yF-PehXerkG-e4EJaqGft33i13RlRJq_xRmiV_lGQUHdpQO3 5kxXhaT3BlbkFJ1xfcvTfnnPxsuNGzvhLdYBU25sc-VgK4QA7IhR0KdBWkqiijTRGjbsp1-zqKJnObr6lkftWyUA"
 TEMP_TOKEN = "328267-66c5803b-80d4-4989-ad6f-8430d60fb714"
+FARZAM_FIGMA_ACCESS_TOKEN = "figd_iVOxEWPrSYY0MFIOD06Btza3Z2ofcJvaPENMSNSB"
+
 
 # Base prompt template that will be used for both OpenAI and Gemini
 BASE_PROMPT_TEMPLATE = """
@@ -83,7 +85,8 @@ def upload_design(request):
     """
     Upload a design (not used in this case as we fetch designs directly from Figma).
     """
-    return render(request, 'upload.html')
+    context = {'figma_file_id': DEFAULT_FIGMA_FILE_ID}
+    return render(request, 'upload.html', context)
 
 @csrf_exempt
 def fetch_figma_file(request):
@@ -96,6 +99,7 @@ def fetch_figma_file(request):
     headers = {"X-Figma-Token": FIGMA_ACCESS_TOKEN}
 
     response = requests.get(url, headers=headers)
+    print("MEE::: Figma User Info:", response.json())
 
     url = f"https://api.figma.com/v1/files/{file_id}"
     response = requests.get(url, headers=headers)

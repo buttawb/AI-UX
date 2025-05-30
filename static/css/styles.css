@@ -46,6 +46,7 @@ body {
     margin-bottom: 1rem;
     background: linear-gradient(135deg, var(--primary), #4f46e5);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
@@ -272,6 +273,27 @@ body {
     border-radius: var(--radius);
 }
 
+.heatmap-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 5;
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+/* Style for the heatmap canvas */
+.heatmap-layer canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100% !important; 
+    height: 100% !important;
+}
+
 .ux-report {
     background-color: var(--background);
     border-radius: var(--radius);
@@ -300,7 +322,7 @@ body {
     font-size: 16px;
     cursor: pointer;
     transition: all 0.2s ease;
-    z-index: 10;
+    z-index: 20; /* Increased z-index to appear above heatmap */
     border: 2px solid white;
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     transform: translate(-50%, -50%);
@@ -320,7 +342,7 @@ body {
     font-size: 16px;
     cursor: pointer;
     transition: all 0.2s ease;
-    z-index: 10;
+    z-index: 20; /* Increased z-index to appear above heatmap */
     border: 2px solid white;
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     transform: translate(-50%, -50%);
