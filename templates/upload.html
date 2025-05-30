@@ -6,6 +6,160 @@
     <title>AI UX Tester - Multi-Frame Analysis</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/styles.css">
+    <style>
+        .visualization-controls {
+            position: relative;
+            margin-bottom: 1rem;
+            padding: 0.5rem;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .viz-controls-wrapper {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+            width: 100%;
+        }
+
+        .viz-toggle-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+
+        .viz-toggle-checkbox {
+            position: absolute;
+            opacity: 0;
+            cursor: pointer;
+            height: 0;
+            width: 0;
+        }
+
+        .viz-toggle-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+            width: 100%;
+            text-align: center;
+        }
+
+        .viz-toggle-btn:hover {
+            background: #f8fafc;
+        }
+
+        .viz-toggle-btn .viz-icon {
+            font-size: 1.1em;
+        }
+
+        .viz-toggle-checkbox:checked + .viz-toggle-btn {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+        }
+
+        .viz-toggle-checkbox:checked + .viz-toggle-btn.heatmap-btn {
+            background: linear-gradient(135deg, #ff9800, #ff5722);
+            color: white;
+            border-color: #e64a19;
+        }
+
+        .viz-toggle-checkbox:checked + .viz-toggle-btn.reach-btn {
+            background: linear-gradient(135deg, #03a9f4, #2196f3);
+            color: white;
+            border-color: #1976d2;
+        }
+
+        .viz-toggle-checkbox:checked + .viz-toggle-btn.suggestions-btn {
+            background: linear-gradient(135deg, #4CAF50, #2E7D32);
+            color: white;
+            border-color: #1B5E20;
+        }
+
+        .viz-toggle-checkbox:checked + .viz-toggle-btn.dropoffs-btn {
+            background: linear-gradient(135deg, #F44336, #D32F2F);
+            color: white;
+            border-color: #B71C1C;
+        }
+
+        .heatmap-layer,
+        .reach-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+            border-radius: var(--radius);
+            overflow: hidden;
+            display: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .heatmap-layer.active,
+        .reach-layer.active {
+            display: block;
+        }
+
+        .ux-suggestion-marker,
+        .ux-dropoff-marker {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        .ux-suggestion-marker {
+            background: rgba(76, 175, 80, 0.9);
+            border: 2px solid #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .ux-dropoff-marker {
+            background: rgba(244, 67, 54, 0.9);
+            border: 2px solid #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .ux-suggestion-marker span,
+        .ux-dropoff-marker span {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+            line-height: 1;
+            text-align: center;
+            width: 100%;
+        }
+
+        .ux-dropoff-marker span {
+            font-size: 14px;
+        }
+
+        .ux-suggestion-marker.active,
+        .ux-dropoff-marker.active {
+            display: block;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -200,14 +354,36 @@
                               <div class="analysis-content">
                                   <div class="design-column">
                                       <div class="visualization-controls">
-                                          <label class="viz-toggle-container">
-                                              <input type="checkbox" class="viz-toggle-checkbox" data-target="heatmap" data-frame="${safeId}" checked>
-                                              <span class="viz-toggle-btn heatmap-btn">🔥 UX Heatmap</span>
-                                          </label>
-                                          <label class="viz-toggle-container">
-                                              <input type="checkbox" class="viz-toggle-checkbox" data-target="reach" data-frame="${safeId}">
-                                              <span class="viz-toggle-btn reach-btn">👆 Finger Reach</span>
-                                          </label>
+                                          <div class="viz-controls-wrapper">
+                                              <label class="viz-toggle-container">
+                                                  <input type="checkbox" class="viz-toggle-checkbox" data-target="heatmap" data-frame="${safeId}">
+                                                  <span class="viz-toggle-btn heatmap-btn">
+                                                      <span class="viz-icon">🔥</span>
+                                                      <span class="viz-label">UX Heatmap</span>
+                                                  </span>
+                                              </label>
+                                              <label class="viz-toggle-container">
+                                                  <input type="checkbox" class="viz-toggle-checkbox" data-target="reach" data-frame="${safeId}">
+                                                  <span class="viz-toggle-btn reach-btn">
+                                                      <span class="viz-icon">👆</span>
+                                                      <span class="viz-label">Finger Reach</span>
+                                                  </span>
+                                              </label>
+                                              <label class="viz-toggle-container">
+                                                  <input type="checkbox" class="viz-toggle-checkbox" data-target="suggestions" data-frame="${safeId}">
+                                                  <span class="viz-toggle-btn suggestions-btn">
+                                                      <span class="viz-icon">💡</span>
+                                                      <span class="viz-label">Suggestions</span>
+                                                  </span>
+                                              </label>
+                                              <label class="viz-toggle-container">
+                                                  <input type="checkbox" class="viz-toggle-checkbox" data-target="dropoffs" data-frame="${safeId}">
+                                                  <span class="viz-toggle-btn dropoffs-btn">
+                                                      <span class="viz-icon">⚠️</span>
+                                                      <span class="viz-label">Drop-offs</span>
+                                                  </span>
+                                              </label>
+                                          </div>
                                       </div>
                                       <div class="heatmap-container" id="heatmap-container-${safeId}">
                                           <img id="image-${safeId}" src="${imageUrl}" alt="Design for ${frame.name}" onerror="console.error('Image failed to load:', this.src)" />
@@ -814,14 +990,16 @@
               const container = $(`#heatmap-container-${frameId}`);
               
               if (target === 'heatmap') {
+                  const heatmapLayer = container.find('.heatmap-layer');
                   if (isChecked) {
-                      container.find('.heatmap-layer').addClass('active');
+                      heatmapLayer.addClass('active');
                   } else {
-                      container.find('.heatmap-layer').removeClass('active');
+                      heatmapLayer.removeClass('active');
                   }
               } else if (target === 'reach') {
+                  const reachLayer = container.find('.reach-layer');
                   if (isChecked) {
-                      container.find('.reach-layer').addClass('active');
+                      reachLayer.addClass('active');
                       
                       // Get container dimensions
                       const containerWidth = container.width();
@@ -833,16 +1011,23 @@
                       // Render the finger reach chart if not already rendered
                       renderFingerReachChart(`heatmap-container-${frameId}`, containerWidth, containerHeight, orientation);
                   } else {
-                      container.find('.reach-layer').removeClass('active');
+                      reachLayer.removeClass('active');
                   }
+              } else if (target === 'suggestions') {
+                  container.find('.ux-suggestion-marker').toggleClass('active', isChecked);
+              } else if (target === 'dropoffs') {
+                  container.find('.ux-dropoff-marker').toggleClass('active', isChecked);
               }
           });
           
-          // Initialize default state - show heatmap layer
+          // Initialize default state - all layers and markers hidden
           $(document).ready(function() {
-              $('.heatmap-layer').addClass('active');
-              // Ensure the heatmap checkbox is checked by default
-              $('.viz-toggle-checkbox[data-target="heatmap"]').prop('checked', true);
+              $('.heatmap-layer').removeClass('active');
+              $('.reach-layer').removeClass('active');
+              $('.ux-suggestion-marker').removeClass('active');
+              $('.ux-dropoff-marker').removeClass('active');
+              // Ensure all checkboxes are unchecked by default
+              $('.viz-toggle-checkbox').prop('checked', false);
           });
       });
       </script>
