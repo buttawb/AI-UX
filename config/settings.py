@@ -52,17 +52,6 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
-    # Serve UI pages
-    "apps.pages",
-
-    # Dynamic DT
-    "apps.dyn_dt",
-
-    # Dynamic API
-    "apps.dyn_api",
-
-    # Charts
-    "apps.charts",
 
     # Tooling API-GEN
     'rest_framework',            # Include DRF           # <-- NEW 
