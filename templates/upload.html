@@ -159,6 +159,81 @@
         .ux-dropoff-marker.active {
             display: block;
         }
+
+        .design-visualization {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 1rem;
+            align-items: start;
+        }
+
+        .heatmap-container {
+            position: relative;
+            border-radius: var(--radius);
+            overflow: hidden;
+            background-color: var(--background);
+            box-shadow: var(--shadow);
+            width: 100%;
+        }
+
+        .report-column {
+            width: 400px;
+            padding-left: 2rem;
+        }
+
+        .reach-legend {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+
+        .reach-legend.active {
+            display: block;
+        }
+
+        .reach-legend h4 {
+            margin: 0 0 1rem 0;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .legend-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .color-box {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+
+        .color-box.easy {
+            background: rgba(46, 213, 115, 1);
+        }
+
+        .color-box.stretch {
+            background: rgba(255, 204, 0, 1);
+        }
+
+        .color-box.hard {
+            background: rgba(231, 76, 60, 1);
+        }
+
+        .design-column {
+            flex: 1;
+            min-width: 0; /* Prevents flex item from overflowing */
+        }
     </style>
 </head>
 <body>
@@ -394,6 +469,21 @@
                                   <div class="report-column">
                                       <h2>UX/UI Report</h2>
                                       <div class="ux-report" id="report-${safeId}">${frameAnalysis.report}</div>
+                                      <div class="reach-legend" id="reach-legend-${safeId}">
+                                          <h4>Thumb Reach Zones</h4>
+                                          <div class="legend-item">
+                                              <div class="color-box easy"></div>
+                                              <span>Easy reach</span>
+                                          </div>
+                                          <div class="legend-item">
+                                              <div class="color-box stretch"></div>
+                                              <span>Stretch reach</span>
+                                          </div>
+                                          <div class="legend-item">
+                                              <div class="color-box hard"></div>
+                                              <span>Hard reach</span>
+                                          </div>
+                                      </div>
                                   </div>
                               </div>
                           </div>
@@ -727,6 +817,12 @@
 
               // Render suggestion markers
               frameAnalysis.suggestions.forEach((s, idx) => {
+                  // Skip if suggestion is empty, null, or undefined
+                  if (!s.suggestion || s.suggestion.trim() === '') {
+                      console.log(`Skipping empty suggestion marker at index ${idx}`);
+                      return;
+                  }
+
                   const marker = document.createElement('div');
                   marker.className = 'ux-suggestion-marker';
                   
@@ -768,6 +864,13 @@
               if (frameAnalysis && frameAnalysis.drop_off_points) {
                   console.log('Found drop-off points:', frameAnalysis.drop_off_points);
                   frameAnalysis.drop_off_points.forEach((d, idx) => {
+                      // Skip if both reason and suggestion are empty, null, or undefined
+                      const content = d.reason || d.suggestion;
+                      if (!content || content.trim() === '') {
+                          console.log(`Skipping empty dropoff marker at index ${idx}`);
+                          return;
+                      }
+
                       const marker = document.createElement('div');
                       marker.className = 'ux-dropoff-marker';
                       
@@ -789,7 +892,7 @@
                           // Update popup content
                           dropoffPopup.innerHTML = `
                               <h3>Drop-off Point #${idx + 1}</h3>
-                              <p>${d.reason}</p>
+                              <p>${content}</p>
                           `;
                           
                           // Center popup over the image container
@@ -801,7 +904,7 @@
                           activeMarker = marker;
                       };
                       
-                      console.log('Adding drop-off marker at:', { x: d.x, y: d.y, reason: d.reason });
+                      console.log('Adding drop-off marker at:', { x: d.x, y: d.y, content: content });
                       container.appendChild(marker);
                   });
               } else {
@@ -941,42 +1044,6 @@
                   ctx.fill();
               }
               
-              // Add a legend
-              ctx.font = '12px Inter';
-              ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-              
-              const legendX = 10;
-              let legendY = 20;
-              const legendSpacing = 20;
-              
-              // Add title
-              ctx.font = 'bold 14px Inter';
-              ctx.fillText('Thumb Reach Zones', legendX, legendY);
-              legendY += legendSpacing + 5;
-              
-              // Reset font
-              ctx.font = '12px Inter';
-              
-              // Easy reach (green)
-              ctx.fillStyle = 'rgba(46, 213, 115, 1)';
-              ctx.fillRect(legendX, legendY, 15, 15);
-              ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-              ctx.fillText('Easy reach', legendX + 20, legendY + 12);
-              legendY += legendSpacing;
-              
-              // Stretch reach (yellow)
-              ctx.fillStyle = 'rgba(255, 204, 0, 1)';
-              ctx.fillRect(legendX, legendY, 15, 15);
-              ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-              ctx.fillText('Stretch reach', legendX + 20, legendY + 12);
-              legendY += legendSpacing;
-              
-              // Hard reach (red)
-              ctx.fillStyle = 'rgba(231, 76, 60, 1)';
-              ctx.fillRect(legendX, legendY, 15, 15);
-              ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-              ctx.fillText('Hard reach', legendX + 20, legendY + 12);
-              
               console.log('Finger reach chart rendered successfully');
               console.log('==== FINGER REACH CHART GENERATION COMPLETE ====');
           }
@@ -998,8 +1065,10 @@
                   }
               } else if (target === 'reach') {
                   const reachLayer = container.find('.reach-layer');
+                  const reachLegend = $(`#reach-legend-${frameId}`);
                   if (isChecked) {
                       reachLayer.addClass('active');
+                      reachLegend.addClass('active');
                       
                       // Get container dimensions
                       const containerWidth = container.width();
@@ -1012,6 +1081,7 @@
                       renderFingerReachChart(`heatmap-container-${frameId}`, containerWidth, containerHeight, orientation);
                   } else {
                       reachLayer.removeClass('active');
+                      reachLegend.removeClass('active');
                   }
               } else if (target === 'suggestions') {
                   container.find('.ux-suggestion-marker').toggleClass('active', isChecked);
@@ -1024,6 +1094,7 @@
           $(document).ready(function() {
               $('.heatmap-layer').removeClass('active');
               $('.reach-layer').removeClass('active');
+              $('.reach-legend').removeClass('active');
               $('.ux-suggestion-marker').removeClass('active');
               $('.ux-dropoff-marker').removeClass('active');
               // Ensure all checkboxes are unchecked by default
