@@ -199,9 +199,14 @@
                               </div>
                               <div class="analysis-content">
                                   <div class="design-column">
+                                      <div class="visualization-controls">
+                                          <button class="viz-toggle-btn heatmap-btn active" data-target="heatmap" data-frame="${safeId}">UX Heatmap</button>
+                                          <button class="viz-toggle-btn reach-btn" data-target="reach" data-frame="${safeId}">Finger Reach</button>
+                                      </div>
                                       <div class="heatmap-container" id="heatmap-container-${safeId}">
                                           <img id="image-${safeId}" src="${imageUrl}" alt="Design for ${frame.name}" onerror="console.error('Image failed to load:', this.src)" />
                                           <div class="heatmap-layer" id="heatmap-layer-${safeId}"></div>
+                                          <div class="reach-layer" id="reach-layer-${safeId}"></div>
                                       </div>
                                   </div>
                                   <div class="report-column">
@@ -630,6 +635,204 @@
                   }
               });
           }
+          // Render mobile finger reach chart
+          function renderFingerReachChart(containerId, containerWidth, containerHeight, orientation = 'portrait') {
+              console.log('==== FINGER REACH CHART GENERATION START ====');
+              console.log('Rendering finger reach chart for container:', containerId);
+              console.log('Container dimensions:', { width: containerWidth, height: containerHeight });
+              
+              const container = document.getElementById(containerId);
+              if (!container) {
+                  console.error('ERROR: Container not found:', containerId);
+                  return;
+              }
+              
+              const reachLayer = container.querySelector('.reach-layer');
+              if (!reachLayer) {
+                  console.error('ERROR: Reach layer not found in container');
+                  return;
+              }
+              
+              // Clear any existing content
+              reachLayer.innerHTML = '';
+              
+              // Create a canvas element
+              const canvas = document.createElement('canvas');
+              canvas.width = containerWidth;
+              canvas.height = containerHeight;
+              canvas.style.position = 'absolute';
+              canvas.style.top = '0';
+              canvas.style.left = '0';
+              canvas.style.width = '100%';
+              canvas.style.height = '100%';
+              
+              // Add the canvas to the reach layer
+              reachLayer.appendChild(canvas);
+              
+              const ctx = canvas.getContext('2d');
+              
+              // Draw the reach zones based on orientation
+              if (orientation === 'portrait') {
+                  // Values are based on thumb reach research for average hand size
+                  // Bottom center is the reference point (thumb position)
+                  const centerX = containerWidth / 2;
+                  const bottomY = containerHeight;
+                  
+                  // Easy reach zone (green) - approx 40% of screen from bottom
+                  const easyReachGradient = ctx.createRadialGradient(
+                      centerX, bottomY, 0,
+                      centerX, bottomY, containerHeight * 0.4
+                  );
+                  easyReachGradient.addColorStop(0, 'rgba(46, 213, 115, 0.6)'); // Green
+                  easyReachGradient.addColorStop(1, 'rgba(46, 213, 115, 0)');
+                  
+                  // Stretch zone (yellow) - approx 70% of screen from bottom
+                  const stretchReachGradient = ctx.createRadialGradient(
+                      centerX, bottomY, containerHeight * 0.4,
+                      centerX, bottomY, containerHeight * 0.7
+                  );
+                  stretchReachGradient.addColorStop(0, 'rgba(255, 204, 0, 0.6)'); // Yellow
+                  stretchReachGradient.addColorStop(1, 'rgba(255, 204, 0, 0)');
+                  
+                  // Difficult zone (red) - rest of the screen
+                  const hardReachGradient = ctx.createRadialGradient(
+                      centerX, bottomY, containerHeight * 0.7,
+                      centerX, bottomY, containerHeight
+                  );
+                  hardReachGradient.addColorStop(0, 'rgba(231, 76, 60, 0.6)'); // Red
+                  hardReachGradient.addColorStop(1, 'rgba(231, 76, 60, 0)');
+                  
+                  // Render the zones from hardest to easiest reach
+                  ctx.fillStyle = hardReachGradient;
+                  ctx.fillRect(0, 0, containerWidth, containerHeight);
+                  
+                  ctx.fillStyle = stretchReachGradient;
+                  ctx.beginPath();
+                  ctx.arc(centerX, bottomY, containerHeight * 0.7, 0, Math.PI, true);
+                  ctx.fill();
+                  
+                  ctx.fillStyle = easyReachGradient;
+                  ctx.beginPath();
+                  ctx.arc(centerX, bottomY, containerHeight * 0.4, 0, Math.PI, true);
+                  ctx.fill();
+              } else {
+                  // Landscape mode - adjust for right thumb position
+                  const rightX = containerWidth;
+                  const centerY = containerHeight / 2;
+                  
+                  // Easy reach zone (green) - approx 40% of screen from right
+                  const easyReachGradient = ctx.createRadialGradient(
+                      rightX, centerY, 0,
+                      rightX, centerY, containerWidth * 0.4
+                  );
+                  easyReachGradient.addColorStop(0, 'rgba(46, 213, 115, 0.6)'); // Green
+                  easyReachGradient.addColorStop(1, 'rgba(46, 213, 115, 0)');
+                  
+                  // Stretch zone (yellow) - approx 70% of screen from right
+                  const stretchReachGradient = ctx.createRadialGradient(
+                      rightX, centerY, containerWidth * 0.4,
+                      rightX, centerY, containerWidth * 0.7
+                  );
+                  stretchReachGradient.addColorStop(0, 'rgba(255, 204, 0, 0.6)'); // Yellow
+                  stretchReachGradient.addColorStop(1, 'rgba(255, 204, 0, 0)');
+                  
+                  // Difficult zone (red) - rest of the screen
+                  const hardReachGradient = ctx.createRadialGradient(
+                      rightX, centerY, containerWidth * 0.7,
+                      rightX, centerY, containerWidth
+                  );
+                  hardReachGradient.addColorStop(0, 'rgba(231, 76, 60, 0.6)'); // Red
+                  hardReachGradient.addColorStop(1, 'rgba(231, 76, 60, 0)');
+                  
+                  // Render the zones from hardest to easiest reach
+                  ctx.fillStyle = hardReachGradient;
+                  ctx.fillRect(0, 0, containerWidth, containerHeight);
+                  
+                  ctx.fillStyle = stretchReachGradient;
+                  ctx.beginPath();
+                  ctx.arc(rightX, centerY, containerWidth * 0.7, -Math.PI/2, Math.PI/2, true);
+                  ctx.fill();
+                  
+                  ctx.fillStyle = easyReachGradient;
+                  ctx.beginPath();
+                  ctx.arc(rightX, centerY, containerWidth * 0.4, -Math.PI/2, Math.PI/2, true);
+                  ctx.fill();
+              }
+              
+              // Add a legend
+              ctx.font = '12px Inter';
+              ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+              
+              const legendX = 10;
+              let legendY = 20;
+              const legendSpacing = 20;
+              
+              // Add title
+              ctx.font = 'bold 14px Inter';
+              ctx.fillText('Thumb Reach Zones', legendX, legendY);
+              legendY += legendSpacing + 5;
+              
+              // Reset font
+              ctx.font = '12px Inter';
+              
+              // Easy reach (green)
+              ctx.fillStyle = 'rgba(46, 213, 115, 1)';
+              ctx.fillRect(legendX, legendY, 15, 15);
+              ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+              ctx.fillText('Easy reach', legendX + 20, legendY + 12);
+              legendY += legendSpacing;
+              
+              // Stretch reach (yellow)
+              ctx.fillStyle = 'rgba(255, 204, 0, 1)';
+              ctx.fillRect(legendX, legendY, 15, 15);
+              ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+              ctx.fillText('Stretch reach', legendX + 20, legendY + 12);
+              legendY += legendSpacing;
+              
+              // Hard reach (red)
+              ctx.fillStyle = 'rgba(231, 76, 60, 1)';
+              ctx.fillRect(legendX, legendY, 15, 15);
+              ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+              ctx.fillText('Hard reach', legendX + 20, legendY + 12);
+              
+              console.log('Finger reach chart rendered successfully');
+              console.log('==== FINGER REACH CHART GENERATION COMPLETE ====');
+          }
+          
+          // Set up event listeners for visualization toggle buttons
+          $(document).on('click', '.viz-toggle-btn', function() {
+              const frameId = $(this).data('frame');
+              const target = $(this).data('target');
+              
+              // Update active button state
+              $(this).siblings().removeClass('active');
+              $(this).addClass('active');
+              
+              const container = $(`#heatmap-container-${frameId}`);
+              
+              if (target === 'heatmap') {
+                  container.find('.reach-layer').removeClass('active');
+                  container.find('.heatmap-layer').addClass('active');
+              } else if (target === 'reach') {
+                  container.find('.heatmap-layer').removeClass('active');
+                  container.find('.reach-layer').addClass('active');
+                  
+                  // Get container dimensions
+                  const containerWidth = container.width();
+                  const containerHeight = container.height();
+                  
+                  // Determine orientation based on aspect ratio
+                  const orientation = containerWidth > containerHeight ? 'landscape' : 'portrait';
+                  
+                  // Render the finger reach chart if not already rendered
+                  renderFingerReachChart(`heatmap-container-${frameId}`, containerWidth, containerHeight, orientation);
+              }
+          });
+          
+          // Initialize default state - show heatmap layer
+          $(document).ready(function() {
+              $('.heatmap-layer').addClass('active');
+          });
       });
       </script>
 </body>

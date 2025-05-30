@@ -273,7 +273,35 @@ body {
     border-radius: var(--radius);
 }
 
-.heatmap-layer {
+.visualization-controls {
+    display: flex;
+    margin-bottom: 1rem;
+    gap: 1rem;
+}
+
+.viz-toggle-btn {
+    padding: 0.5rem 1rem;
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.viz-toggle-btn:hover {
+    background-color: var(--background);
+}
+
+.viz-toggle-btn.active {
+    background-color: var(--primary);
+    color: white;
+    border-color: var(--primary-dark);
+}
+
+.heatmap-layer,
+.reach-layer {
     position: absolute;
     top: 0;
     left: 0;
@@ -283,10 +311,20 @@ body {
     z-index: 5;
     border-radius: var(--radius);
     overflow: hidden;
+    display: none;
+}
+
+.heatmap-layer.active {
+    display: block;
+}
+
+.reach-layer.active {
+    display: block;
 }
 
 /* Style for the heatmap canvas */
-.heatmap-layer canvas {
+.heatmap-layer canvas,
+.reach-layer canvas {
     position: absolute;
     top: 0;
     left: 0;
