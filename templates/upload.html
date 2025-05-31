@@ -388,6 +388,17 @@
             min-height: 0;
             overflow-y: auto;
             max-height: none;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .ux-report pre {
+            display: none;
+        }
+
+        .ux-report:hover pre {
+            display: none;
         }
 
         .ux-report h2 {
@@ -1014,13 +1025,6 @@
                                       <span>UX Score</span>
                                   </div>
                               </div>
-                              ${uxScore < 80 ? `
-                              <button class="variation-button" onclick="generateVariation('${safeId}', '${frame.name}', ${uxScore}, ${JSON.stringify(frameAnalysis).replace(/'/g, "\\'")})">
-                                  <span class="icon">🎨</span>
-                                  <span>Generate Variation</span>
-                                  <span class="badge">AI</span>
-                              </button>
-                              ` : ''}
                               <div class="analysis-content">
                                   <div class="design-column">
                                       <div class="visualization-controls">
@@ -1070,7 +1074,9 @@
                                   </div>
                                   <div class="report-column">
                                       <h2>UX/UI Report</h2>
-                                      <div class="ux-report" id="report-${safeId}">${frameAnalysis.report}</div>
+                                      <div class="ux-report" id="report-${safeId}">
+                                          ${typeof frameAnalysis.report === 'string' ? frameAnalysis.report : JSON.stringify(frameAnalysis.report, null, 2)}
+                                      </div>
                                       <div class="reach-legend" id="reach-legend-${safeId}">
                                           <h4>Thumb Reach Zones</h4>
                                           <div class="legend-item">
