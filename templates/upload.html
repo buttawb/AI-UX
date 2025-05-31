@@ -883,7 +883,6 @@
               $submitBtn.prop('disabled', true);
               $loader.show();
               $analysisContainer.empty().hide();
-              clearAnalysisData(); // Clear old data when starting new analysis
 
               try {
                   // 1. Fetch the entire Figma file structure
@@ -1904,52 +1903,6 @@
 
               container.innerHTML = '';
               container.appendChild(reportContainer);
-          }
-
-          // Update the frame rendering code to use the new report renderer
-          frames.forEach(frame => {
-              // ... existing frame rendering code ...
-              
-              // When rendering the report, use the new renderer
-              if (frameAnalysis && frameAnalysis.report) {
-                  renderReport(frameAnalysis.report, `report-${safeId}`);
-              }
-              
-              // ... rest of the existing frame rendering code ...
-          });
-
-          function generateVariation(frameId, frameName, uxScore, frameAnalysis) {
-              // Get the image element
-              const imgElement = document.getElementById(`image-${frameId}`);
-              if (!imgElement) {
-                  console.error('Image element not found');
-                  return;
-              }
-
-              // Convert image to base64
-              const canvas = document.createElement('canvas');
-              canvas.width = imgElement.naturalWidth;
-              canvas.height = imgElement.naturalHeight;
-              const ctx = canvas.getContext('2d');
-              ctx.drawImage(imgElement, 0, 0);
-              const base64Image = canvas.toDataURL('image/png');
-
-              // Prepare the data
-              const variationData = {
-                  frameId: frameId,
-                  frameName: frameName,
-                  uxScore: uxScore,
-                  originalImage: base64Image,
-                  suggestions: frameAnalysis.suggestions || [],
-                  dropoffs: frameAnalysis.drop_off_points || [],
-                  positivePoints: frameAnalysis.positive_points || []
-              };
-
-              // Store the data in localStorage
-              localStorage.setItem('variationData', JSON.stringify(variationData));
-
-              // Open the variation page in a new tab
-              window.open('/ux/design_iteration/', '_blank');
           }
       });
       </script>
