@@ -615,6 +615,45 @@
         .file-upload-label .icon {
             font-size: 1.5rem;
         }
+
+        .ux-score-container.poor {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+
+        .variation-button {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+            color: white;
+            border: none;
+            border-radius: var(--radius);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 20;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .variation-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .variation-button .icon {
+            font-size: 1.2rem;
+        }
+
+        .variation-button .badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
     </style>
 </head>
 <body>
@@ -633,6 +672,11 @@
             <a href="/ux/simulation/" class="nav-button">
                 <span class="icon">🎬</span>
                 <span>User Journey</span>
+                <span class="badge">New!</span>
+            </a>
+            <a href="/ux/design_iteration/" class="nav-button">
+                <span class="icon">🔄</span>
+                <span>Design Iteration</span>
                 <span class="badge">New!</span>
             </a>
         </div>
@@ -971,6 +1015,13 @@
                                       <span>UX Score</span>
                                   </div>
                               </div>
+                              ${uxScore < 80 ? `
+                              <button class="variation-button" onclick="generateVariation('${safeId}', '${frame.name}', ${uxScore}, ${JSON.stringify(frameAnalysis).replace(/'/g, "\\'")})">
+                                  <span class="icon">🎨</span>
+                                  <span>Generate Variation</span>
+                                  <span class="badge">AI</span>
+                              </button>
+                              ` : ''}
                               <div class="analysis-content">
                                   <div class="design-column">
                                       <div class="visualization-controls">
@@ -1866,6 +1917,40 @@
               
               // ... rest of the existing frame rendering code ...
           });
+
+          function generateVariation(frameId, frameName, uxScore, frameAnalysis) {
+              // Get the image element
+              const imgElement = document.getElementById(`image-${frameId}`);
+              if (!imgElement) {
+                  console.error('Image element not found');
+                  return;
+              }
+
+              // Convert image to base64
+              const canvas = document.createElement('canvas');
+              canvas.width = imgElement.naturalWidth;
+              canvas.height = imgElement.naturalHeight;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(imgElement, 0, 0);
+              const base64Image = canvas.toDataURL('image/png');
+
+              // Prepare the data
+              const variationData = {
+                  frameId: frameId,
+                  frameName: frameName,
+                  uxScore: uxScore,
+                  originalImage: base64Image,
+                  suggestions: frameAnalysis.suggestions || [],
+                  dropoffs: frameAnalysis.drop_off_points || [],
+                  positivePoints: frameAnalysis.positive_points || []
+              };
+
+              // Store the data in localStorage
+              localStorage.setItem('variationData', JSON.stringify(variationData));
+
+              // Open the variation page in a new tab
+              window.open('/ux/design_iteration/', '_blank');
+          }
       });
       </script>
 </body>

@@ -1,0 +1,250 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI UX Tester - Design Iteration</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <script>
+        // Add static URL prefix for JavaScript
+        const STATIC_URL = "{% static '' %}";
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Design Iteration Generator</h1>
+            <p>Upload your Figma design and get AI-powered design improvements</p>
+        </div>
+
+        <div class="nav-buttons">
+            <a href="/ux/upload_design/" class="nav-button">
+                <span class="icon">📊</span>
+                <span>UX Analysis</span>
+            </a>
+            <a href="/ux/simulation/" class="nav-button">
+                <span class="icon">🎬</span>
+                <span>User Journey</span>
+                <span class="badge">New!</span>
+            </a>
+            <a href="/ux/design_iteration/" class="nav-button active">
+                <span class="icon">🔄</span>
+                <span>Design Iteration</span>
+                <span class="badge">New!</span>
+            </a>
+        </div>
+
+        <div class="warning-message">
+            <span class="icon">⚠️</span>
+            <span>Please upload 1-2 frames for optimal results</span>
+        </div>
+
+        <div id="controls">
+            <div class="form-group">
+                <label for="figmaAccessToken">Figma Access Token</label>
+                <select id="figmaAccessToken" class="form-control">
+                    <option value="">Select a token or enter custom...</option>
+                    <option value="wahab_token">Wahab's Token</option>
+                    <option value="ramsha_token">Ramsha's Token</option>
+                    <option value="farzam_token">Farzam's Token</option>
+                    <option value="custom">Enter Custom Token</option>
+                </select>
+                <div id="customTokenInput" style="display: none; margin-top: 0.5rem;">
+                    <input type="text" id="customFigmaToken" class="form-control" placeholder="Enter your custom Figma access token">
+                </div>
+                <small class="form-text">Select a predefined token or enter your own Figma access token</small>
+            </div>
+
+            <div class="form-group">
+                <label for="figmaFileId">Figma File ID</label>
+                <input type="text" id="figmaFileId" class="form-control" placeholder="Enter your Figma file ID">
+                <small class="form-text">The unique identifier of your Figma file to analyze</small>
+            </div>
+
+            <div class="form-group">
+                <label for="iterationPrompt">Design Requirements (Optional)</label>
+                <textarea id="iterationPrompt" class="form-control" rows="4" placeholder="Enter any specific requirements or improvements you'd like to see in the design..."></textarea>
+                <small class="form-text">Describe what aspects of the design you'd like to improve</small>
+            </div>
+
+            <button id="submitBtn" class="form-control">Generate Iteration</button>
+        </div>
+
+        <div id="loader" style="display: none;">
+            <div class="spinner"></div>
+            <p id="loadingText" class="loading-text">Analyzing your design...</p>
+        </div>
+
+        <div id="iterationContainer" class="iteration-container" style="display: none;">
+            <!-- Original Design -->
+            <div class="iteration-card">
+                <div class="iteration-header">
+                    <h2>Original Design</h2>
+                </div>
+                <img id="originalImage" class="iteration-image" src="" alt="Original Design">
+                <div class="key-changes">
+                    <h3>Original Strengths</h3>
+                    <ul id="originalStrengths" class="strengths-list">
+                        <!-- Will be populated by JavaScript -->
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Improved Design -->
+            <div class="iteration-card">
+                <div class="iteration-header">
+                    <h2>Improved Design</h2>
+                </div>
+                <img id="improvedImage" class="iteration-image" src="" alt="Improved Design">
+                <div class="key-changes">
+                    <h3>Key Improvements</h3>
+                    <ul id="improvementsList" class="improvements-list">
+                        <!-- Will be populated by JavaScript -->
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Comparison Section -->
+            <div class="comparison-section">
+                <h3>Design Comparison</h3>
+                <div id="comparisonRationale" class="rationale">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            const $submitBtn = $('#submitBtn');
+            const $loader = $('#loader');
+            const $loadingText = $('#loadingText');
+            const $iterationContainer = $('#iterationContainer');
+            const $customTokenInput = $('#customTokenInput');
+            const $figmaAccessToken = $('#figmaAccessToken');
+
+            // Handle token selection
+            $figmaAccessToken.on('change', function() {
+                if ($(this).val() === 'custom') {
+                    $customTokenInput.show();
+                } else {
+                    $customTokenInput.hide();
+                }
+            });
+
+            // Helper function to get the selected token
+            function getSelectedToken() {
+                const selectedValue = $figmaAccessToken.val();
+                if (selectedValue === 'custom') {
+                    return $('#customFigmaToken').val();
+                }
+                return selectedValue;
+            }
+
+            // Helper function to ensure minimum display time for loading messages
+            async function updateLoadingText(text, minDisplayTime = 1500) {
+                const startTime = Date.now();
+                $loadingText.text(text);
+                
+                const elapsedTime = Date.now() - startTime;
+                if (elapsedTime < minDisplayTime) {
+                    await new Promise(resolve => setTimeout(resolve, minDisplayTime - elapsedTime));
+                }
+            }
+
+            $submitBtn.on('click', async function() {
+                const figmaToken = getSelectedToken();
+                const figmaFileId = $('#figmaFileId').val();
+                const iterationPrompt = $('#iterationPrompt').val();
+
+                if (!figmaToken) {
+                    alert("Please select or enter a Figma access token");
+                    return;
+                }
+
+                if (!figmaFileId) {
+                    alert("Please enter a Figma file ID");
+                    return;
+                }
+
+                $submitBtn.prop('disabled', true);
+                $loader.show();
+                $iterationContainer.hide();
+
+                try {
+                    await updateLoadingText('Fetching Figma file...');
+                    
+                    const response = await $.ajax({
+                        url: '/ux/generate_iteration/',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            figma_token: figmaToken,
+                            design_data: {
+                                type: 'figma',
+                                id: figmaFileId
+                            },
+                            iteration_prompt: iterationPrompt
+                        })
+                    });
+
+                    if (response.status === 'success') {
+                        const data = response.data;
+                        
+                        // Update original design
+                        $('#originalImage').attr('src', `data:image/png;base64,${data.original_images[0].image}`);
+                        
+                        // Update improved design - handle PIL Image response
+                        if (data.improved_design.images && data.improved_design.images[0]) {
+                            const improvedImage = data.improved_design.images[0];
+                            // Convert PIL Image to data URL
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+                            const img = new Image();
+                            
+                            img.onload = function() {
+                                canvas.width = img.width;
+                                canvas.height = img.height;
+                                ctx.drawImage(img, 0, 0);
+                                const dataUrl = canvas.toDataURL('image/png');
+                                $('#improvedImage').attr('src', dataUrl);
+                            };
+                            
+                            // Convert the image data to a blob URL
+                            const blob = new Blob([improvedImage], { type: 'image/png' });
+                            img.src = URL.createObjectURL(blob);
+                        }
+                        
+                        // Update strengths and improvements
+                        const $originalStrengths = $('#originalStrengths').empty();
+                        data.comparison.original_strengths.forEach(strength => {
+                            $originalStrengths.append(`<li>${strength}</li>`);
+                        });
+
+                        const $improvementsList = $('#improvementsList').empty();
+                        data.improved_design.key_changes.forEach(change => {
+                            $improvementsList.append(`<li>${change}</li>`);
+                        });
+
+                        // Update rationale
+                        $('#comparisonRationale').text(data.comparison.rationale);
+
+                        // Show the iteration container
+                        $iterationContainer.show();
+                    } else {
+                        throw new Error(response.message || 'Failed to generate iteration');
+                    }
+                } catch (error) {
+                    alert(error.message || 'An error occurred while generating the iteration');
+                } finally {
+                    $submitBtn.prop('disabled', false);
+                    $loader.hide();
+                }
+            });
+        });
+    </script>
+</body>
+</html> 
