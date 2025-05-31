@@ -27,3 +27,4 @@ gunicorn==23.0.0
 #mysqlclient==2.1.1
 django-dbbackup==4.2.1
 pillow
+moviepy

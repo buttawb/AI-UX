@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,7 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI UX Tester - User Journey Simulation</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <script>
+        // Add static URL prefix for JavaScript
+        const STATIC_URL = "{% static '' %}";
+    </script>
     <style>
         .simulation-container {
             background-color: var(--surface);
@@ -156,11 +161,13 @@
         .video-container {
             position: relative;
             width: 100%;
-            margin-top: 2rem;
+            max-width: 375px;  /* Match the canvas width */
+            margin: 2rem auto;  /* Center the container */
             border-radius: var(--radius);
             overflow: hidden;
             background: var(--background);
             display: none;
+            box-shadow: var(--shadow);
         }
 
         .video-container.active {
@@ -170,7 +177,9 @@
 
         .video-container video {
             width: 100%;
+            height: auto;
             border-radius: var(--radius);
+            display: block;  /* Remove any extra space */
         }
 
         .video-controls {
@@ -202,6 +211,31 @@
 
         .video-control-btn:hover {
             background: rgba(255, 255, 255, 0.1);
+        }
+
+        .download-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius);
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .video-container:hover .download-btn {
+            opacity: 1;
+        }
+
+        .download-btn:hover {
+            background: rgba(0, 0, 0, 0.8);
         }
 
         .file-upload-container {
@@ -292,6 +326,12 @@
             font-size: 0.9rem;
             margin-top: 0.5rem;
         }
+
+        .loading-progress {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
     </style>
 </head>
 <body>
@@ -305,7 +345,7 @@
             <a href="/ux/upload_design/" class="nav-button">
                 <span class="icon">📊</span>
                 <span>UX Analysis</span>
-                <span class="badge">Heatmap</span>
+                {% comment %} <span class="badge">Heatmap</span> {% endcomment %}
             </a>
             <a href="/ux/simulation/" class="nav-button active">
                 <span class="icon">🎬</span>
@@ -351,7 +391,7 @@
                             <span>Click to upload or drag and drop</span>
                         </label>
                     </div>
-                    <small class="form-text">Supported formats: Figma (.fig), Sketch (.sketch), Adobe XD (.xd)</small>
+                    <small class="form-text">Supported formats: Figma (.fig)</small>
                 </div>
             </div>
 
@@ -371,27 +411,36 @@
                     <div class="task-suggestion-chip">Create an account</div>
                     <div class="task-suggestion-chip">Search for items</div>
                     <div class="task-suggestion-chip">Complete checkout</div>
-                    <div class="task-suggestion-chip">Upload content</div>
+                    {% comment %} <div class="task-suggestion-chip">Upload content</div> {% endcomment %}
                 </div>
                 <div class="form-group">
                     <label for="taskDescription">Task Description</label>
                     <textarea id="taskDescription" class="form-control" rows="3" placeholder="Describe the user journey you want to simulate..."></textarea>
                     <small class="form-text">Be specific about the steps and goals of the user journey</small>
                 </div>
+
+            <div id="simulationContainer" style="display:none; position: relative; margin-top: 20px;"></div>
+            <a href="#" id="downloadSimulation" style="display:none; margin-top: 10px;">Download Simulation JSON</a>
             </div>
 
             <button id="startSimulationBtn" class="form-control">Start Simulation</button>
+
+
         </div>
 
         <div class="video-container" id="simulationVideo">
             <video id="simulationPlayer" loop>
-                <source src="" type="video/mp4">
+                <source src="" type="video/webm">
                 Your browser does not support the video tag.
             </video>
             <div class="video-controls">
                 <button class="video-control-btn" id="playPauseBtn">▶️</button>
                 <button class="video-control-btn" id="fullscreenBtn">⛶</button>
             </div>
+            <button class="download-btn" id="downloadBtn">
+                <span>⬇️</span>
+                <span>Download</span>
+            </button>
         </div>
     </div>
 
@@ -399,7 +448,8 @@
         <div class="loading-content">
             <div class="loading-spinner"></div>
             <div class="loading-text">Generating Simulation</div>
-            <div class="loading-subtext">This may take a few minutes...</div>
+            <div class="loading-subtext" id="loadingSubtext">This may take a few minutes...</div>
+            <div class="loading-progress" id="loadingProgress"></div>
         </div>
     </div>
 
@@ -481,6 +531,7 @@
                 $startBtn.prop('disabled', true);
 
                 try {
+                    console.log("Sending request to generate simulation...");
                     const response = await $.ajax({
                         url: '/ux/generate_simulation/',
                         method: 'POST',
@@ -490,16 +541,24 @@
                         }),
                         contentType: 'application/json'
                     });
-
-                    if (response.video_url) {
-                        $video.attr('src', response.video_url);
-                        $videoContainer.addClass('active');
-                        $video[0].play();
+                    
+                    console.log("Response received:", response);
+                    
+                    if (response.simulation_data) {
+                        console.log("Simulation data received:", response.simulation_data);
+                        
+                        if (!response.simulation_data.steps || !Array.isArray(response.simulation_data.steps)) {
+                            throw new Error('Invalid simulation data format: missing or invalid steps array');
+                        }
+                        
+                        // Create video from simulation data
+                        await createAndDownloadVideo(response.simulation_data);
                     } else {
-                        throw new Error('No video URL in response');
+                        throw new Error('No simulation data returned');
                     }
                 } catch (error) {
-                    alert('Failed to generate simulation: ' + error.message);
+                    console.error("Error in simulation generation:", error);
+                    alert('Failed to generate simulation: ' + (error.message || 'Unknown error'));
                 } finally {
                     $loadingOverlay.removeClass('active');
                     $startBtn.prop('disabled', false);
@@ -536,6 +595,271 @@
                 $playPauseBtn.text('▶️');
             });
         });
+
+        async function createAndDownloadVideo(simulationData) {
+            try {
+                console.log("Starting video creation...");
+                const loadingOverlay = document.getElementById('loadingOverlay');
+                const loadingSubtext = document.getElementById('loadingSubtext');
+                const loadingProgress = document.getElementById('loadingProgress');
+                
+                loadingOverlay.classList.add('active');
+                loadingSubtext.textContent = 'Initializing video generation...';
+                
+                // Create canvas with higher resolution
+                const canvas = document.createElement('canvas');
+                const width = 750;  // 2x resolution
+                const height = 1334; // 2x resolution
+                canvas.width = width;
+                canvas.height = height;
+                canvas.style.display = 'none';
+                document.body.appendChild(canvas);
+              
+                const ctx = canvas.getContext('2d');
+                
+                // Prepare to record canvas stream with higher quality
+                const stream = canvas.captureStream(30); // 30 FPS for smoother video
+                let chunks = [];
+                
+                // Try different codecs in order of preference
+                const codecs = [
+                    'video/webm;codecs=vp9',
+                    'video/webm;codecs=vp8',
+                    'video/webm'
+                ];
+                
+                let mediaRecorder;
+                for (const codec of codecs) {
+                    try {
+                        mediaRecorder = new MediaRecorder(stream, {
+                            mimeType: codec,
+                            videoBitsPerSecond: 5000000 // 5 Mbps for high quality
+                        });
+                        console.log("Using codec:", codec);
+                        break;
+                    } catch (e) {
+                        console.log("Codec not supported:", codec);
+                        continue;
+                    }
+                }
+                
+                if (!mediaRecorder) {
+                    throw new Error("No supported video codec found");
+                }
+                
+                mediaRecorder.ondataavailable = e => chunks.push(e.data);
+                mediaRecorder.start();
+                loadingSubtext.textContent = 'Starting video recording...';
+
+                // Helper to load image with retry
+                async function loadImage(src, retries = 3) {
+                    console.log("Loading image:", src);
+                    loadingSubtext.textContent = `Loading image: ${src.split('/').pop()}`;
+                    let lastError = null;
+                    
+                    for (let i = 0; i < retries; i++) {
+                        try {
+                            const img = new Image();
+                            img.crossOrigin = "anonymous";
+                            
+                            // Add timeout to image loading
+                            const timeoutPromise = new Promise((_, reject) => {
+                                setTimeout(() => reject(new Error('Image load timeout')), 10000);
+                            });
+                            
+                            await Promise.race([
+                                new Promise((res, rej) => {
+                                    img.onload = () => {
+                                        console.log("Image loaded successfully:", src);
+                                        res();
+                                    };
+                                    img.onerror = (e) => {
+                                        console.error("Image load error:", e);
+                                        rej(e);
+                                    };
+                                    const imageUrl = STATIC_URL + src;
+                                    console.log("Attempting to load image from:", imageUrl);
+                                    img.src = imageUrl;
+                                }),
+                                timeoutPromise
+                            ]);
+                            
+                            return img;
+                        } catch (e) {
+                            lastError = e;
+                            console.error(`Attempt ${i + 1} failed to load image:`, e);
+                            if (i === retries - 1) {
+                                console.error("All retry attempts failed for image:", src);
+                                throw new Error(`Failed to load image after ${retries} attempts: ${lastError.message}`);
+                            }
+                            loadingSubtext.textContent = `Retrying image load (${i + 1}/${retries})...`;
+                            await new Promise(r => setTimeout(r, 1000));
+                        }
+                    }
+                }
+
+                // Helper to draw action text with animation
+                function drawActionText(ctx, text, progress, width, height) {
+                    const padding = 40;
+                    const textHeight = 80;
+                    const y = height - padding - textHeight;
+                    
+                    // Draw gradient background
+                    const gradient = ctx.createLinearGradient(0, y, 0, height);
+                    gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+                    gradient.addColorStop(1, 'rgba(0, 0, 0, 0.8)');
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(0, y, width, textHeight + padding);
+
+                    // Draw action text with animation
+                    ctx.fillStyle = 'white';
+                    ctx.font = 'bold 32px Inter, sans-serif';
+                    ctx.textAlign = 'center';
+                    
+                    // Split text into lines
+                    const words = text.split(' ');
+                    const lines = [];
+                    let currentLine = words[0];
+                    
+                    for (let i = 1; i < words.length; i++) {
+                        const word = words[i];
+                        const width = ctx.measureText(currentLine + " " + word).width;
+                        if (width < width - 100) {
+                            currentLine += " " + word;
+                        } else {
+                            lines.push(currentLine);
+                            currentLine = word;
+                        }
+                    }
+                    lines.push(currentLine);
+
+                    // Draw each line with animation
+                    lines.forEach((line, index) => {
+                        const opacity = Math.min(1, progress * 2 - (index * 0.2));
+                        if (opacity > 0) {
+                            ctx.globalAlpha = opacity;
+                            ctx.fillText(line, width/2, y + 40 + (index * 40));
+                        }
+                    });
+                    ctx.globalAlpha = 1;
+                }
+
+                // Helper to draw progress indicator
+                function drawProgressIndicator(ctx, currentStep, totalSteps, width) {
+                    const padding = 20;
+                    const height = 4;
+                    const y = 20;
+                    
+                    // Draw background
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                    ctx.fillRect(padding, y, width - (padding * 2), height);
+                    
+                    // Draw progress
+                    const progress = (currentStep + 1) / totalSteps;
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(padding, y, (width - (padding * 2)) * progress, height);
+                }
+              
+                const totalSteps = simulationData.steps.length;
+                for (let stepIndex = 0; stepIndex < totalSteps; stepIndex++) {
+                    const step = simulationData.steps[stepIndex];
+                    try {
+                        console.log("Processing step:", step);
+                        loadingSubtext.textContent = `Processing frame ${stepIndex + 1} of ${totalSteps}`;
+                        loadingProgress.textContent = `Step ${stepIndex + 1}: ${step.action}`;
+                        
+                        const img = await loadImage(step.frame_url);
+                        
+                        const durationMs = step.duration * 1000;
+                        const frameCount = Math.round(30 * step.duration); // 30 FPS
+                        
+                        console.log(`Generating ${frameCount} frames for step`);
+                        loadingSubtext.textContent = `Generating ${frameCount} frames for step ${stepIndex + 1}`;
+                        
+                        // Add transition effect between steps
+                        const transitionFrames = 15; // 0.5 seconds at 30fps
+                        
+                        for (let i = 0; i < frameCount; i++) {
+                            ctx.clearRect(0, 0, width, height);
+                            
+                            // Draw the image
+                            ctx.drawImage(img, 0, 0, width, height);
+                            
+                            // Draw progress indicator
+                            drawProgressIndicator(ctx, stepIndex, totalSteps, width);
+                            
+                            // Draw action text with animation
+                            const progress = i / frameCount;
+                            drawActionText(ctx, step.overlay_text, progress, width, height);
+                            
+                            // Update progress
+                            if (i % 10 === 0) {
+                                loadingProgress.textContent = `Step ${stepIndex + 1}: ${step.action} (${Math.round(progress * 100)}%)`;
+                            }
+                            
+                            await new Promise(r => setTimeout(r, 1000 / 30));
+                        }
+                    } catch (error) {
+                        console.error(`Error processing step:`, error);
+                        throw error;
+                    }
+                }
+              
+                console.log("All frames generated, stopping recording...");
+                loadingSubtext.textContent = 'Finalizing video...';
+                mediaRecorder.stop();
+              
+                // Wait for recording to finish and assemble blob
+                const videoBlob = await new Promise(resolve => {
+                    mediaRecorder.onstop = e => {
+                        console.log("Recording stopped, creating blob...");
+                        const blob = new Blob(chunks, {type: 'video/webm'});
+                        resolve(blob);
+                    };
+                });
+              
+                // Remove canvas from DOM
+                canvas.remove();
+              
+                console.log("Creating video element...");
+                // Create video element and play it
+                const videoContainer = document.getElementById('simulationVideo');
+                const video = document.getElementById('simulationPlayer');
+                const downloadBtn = document.getElementById('downloadBtn');
+                
+                // Create blob URL for the video
+                const videoBlobUrl = URL.createObjectURL(videoBlob);
+                video.src = videoBlobUrl;
+                videoContainer.classList.add('active');
+                
+                // Set up download button
+                downloadBtn.onclick = () => {
+                    const a = document.createElement('a');
+                    a.href = videoBlobUrl;
+                    a.download = 'simulation.webm';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                };
+                
+                // Wait for video to be ready before playing
+                video.onloadeddata = () => {
+                    video.play().catch(e => {
+                        console.error("Error playing video:", e);
+                        alert("Click the play button to start the video");
+                    });
+                };
+                
+                console.log("Video generation completed successfully");
+            } catch (error) {
+                console.error('Error creating video:', error);
+                throw error; // Re-throw to be caught by the outer try-catch
+            } finally {
+                // Hide loading state
+                const loadingOverlay = document.getElementById('loadingOverlay');
+                loadingOverlay.classList.remove('active');
+            }
+        }
     </script>
 </body>
 </html> 

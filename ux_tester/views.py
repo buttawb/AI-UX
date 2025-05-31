@@ -10,18 +10,19 @@ import tempfile
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 import time
-from google.cloud import genai
-from google.genai import types
+# from google import genai
+# from google.genai import types
+import base64
 
 # Initialize Google AI client
-genai.configure(api_key=AVIALDO_GEMINI_KEY)
-client = genai.Client()
+# client = genai.Client(api_key=AVIALDO_GEMINI_KEY)
 
 # Default Figma file ID (will be overridden by user input)
 DEFAULT_FIGMA_FILE_ID = 'dl5VgCWMZwL3uRi9mIOMvX'
 FIGMA_ACCESS_TOKEN = 'figd_iVOxEWPrSYY0MFIOD06Btza3Z2ofcJvaPENMSNSB'
 RAMSHA_FIGMA_ACCESS_TOKEN = 'figd_3bgofXhJbrbVRuPxlaXmrH-AwL6RTdr9hW1PLydz'
 OPENAI_API_KEY = "sk-proj-TqTaxIMCk6fsrNcaGXE1yF-PehXerkG-e4EJaqGft33i13RlRJq_xRmiV_lGQUHdpQO3 5kxXhaT3BlbkFJ1xfcvTfnnPxsuNGzvhLdYBU25sc-VgK4QA7IhR0KdBWkqiijTRGjbsp1-zqKJnObr6lkftWyUA"
+OPENAI_API_KEY_SULTAN="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"
 TEMP_TOKEN = "328267-66c5803b-80d4-4989-ad6f-8430d60fb714"
 FARZAM_FIGMA_ACCESS_TOKEN = "figd_iVOxEWPrSYY0MFIOD06Btza3Z2ofcJvaPENMSNSB"
 
@@ -92,39 +93,27 @@ Here is the Figma design data:
 
 # Simulation prompt template
 SIMULATION_PROMPT_TEMPLATE = """
-You are a UX/UI expert tasked with creating a video simulation of a user journey through a design. 
-Your goal is to demonstrate how a user would interact with the interface to complete the specified task.
+Create a video simulation of this user journey:
 
-Task Description: {task_description}
+Task: {task_description}
 
-Design Data: {design_data}
+Design: {design_data}
 
-Please create a detailed simulation that:
-1. Shows the exact sequence of interactions needed to complete the task
-2. Highlights each click/tap with a visual indicator
-3. Includes brief text overlays explaining each action
-4. Demonstrates proper timing between actions (realistic user behavior)
-5. Points out any potential UX issues or improvements
-6. Maintains a professional and educational tone
+Requirements:
+1. Show interaction sequence for task completion
+2. Highlight clicks/taps with visual indicators
+3. Add brief text overlays for actions
+4. Use realistic timing between actions
+5. Note UX issues/improvements
+6. Keep professional tone
 
-The simulation should be returned as a video file that:
-- Is 30-60 seconds in length
-- Has a resolution of 1280x720
-- Includes smooth transitions between frames
-- Uses a clean, professional visual style
-- Has clear, readable text overlays
-- Includes a progress indicator
-- Shows success/failure states where relevant
+Video specs:
+- Duration: 30-60 seconds
+- Resolution: 1280x720
+- Include: smooth transitions, progress indicator, success/failure states
+- Style: clean, professional with readable text
 
-Please ensure the simulation is:
-- Clear and easy to follow
-- Realistic in terms of user behavior
-- Educational and insightful
-- Professional in appearance
-- Focused on the specific task
-- Highlighting key interaction points
-
-Return the video as a base64-encoded MP4 file.
+Return as base64-encoded MP4.
 """
 
 @csrf_exempt
@@ -137,7 +126,7 @@ def simulation_view(request):
 @csrf_exempt
 def generate_simulation(request):
     """
-    Generate a user journey simulation video using OpenAI's API with Gemini as fallback.
+    Generate a user journey simulation using OpenAI's API with GIF fallback.
     """
     if request.method != 'POST':
         return JsonResponse({"error": "POST request required."}, status=405)
@@ -153,13 +142,176 @@ def generate_simulation(request):
         # Handle different design data types
         if design_data['type'] == 'figma':
             # Fetch Figma file data
+            figma_file_id = design_data['id']
             figma_response = requests.get(
-                f"https://api.figma.com/v1/files/{design_data['id']}",
+                f"https://api.figma.com/v1/files/{figma_file_id}",
                 headers={"X-Figma-Token": FIGMA_ACCESS_TOKEN}
             )
             if figma_response.status_code != 200:
                 return JsonResponse({"error": "Failed to fetch Figma file."}, status=400)
-            design_data = figma_response.json()
+            
+            # Save the Figma file temporarily
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.fig') as temp_file:
+                temp_file.write(figma_response.content)
+                temp_file_path = temp_file.name
+
+            try:
+                # Try to generate video using OpenAI
+                headers = {
+                    'Authorization': f'Bearer {OPENAI_API_KEY_SULTAN}',
+                    'Content-Type': 'application/json',
+                }
+
+                # First attempt: Try to generate a video
+                video_prompt = f"""
+                Create a 30-second video simulation of this user journey:
+                Task: {task_description}
+                Design: [Figma file attached]
+                
+                Requirements:
+                1. Show exact interaction sequence
+                2. Highlight clicks/taps
+                3. Add text overlays
+                4. Use realistic timing
+                5. Note UX issues
+                6. Keep professional tone
+                
+                Return as MP4 video.
+                """
+
+                # Read the file content
+                with open(temp_file_path, 'rb') as file:
+                    file_content = file.read()
+
+                # Encode file content to base64
+                print("File content:", file_content)
+                print()
+                file_content_base64 = base64.b64encode(file_content).decode('utf-8')
+                
+                # First, upload the file to OpenAI
+                file_upload_url = "https://api.openai.com/v1/files"
+                file_upload_headers = {
+                    'Authorization': f'Bearer {OPENAI_API_KEY_SULTAN}',
+                }
+                
+                # Convert Figma data to JSON string
+                figma_json = json.dumps(figma_response.json())
+                
+                # Create multipart form data
+                files = {
+                    'file': ('design.json', figma_json.encode('utf-8'), 'application/json')
+                }
+                data = {
+                    'purpose': 'assistants'
+                }
+                
+                file_upload_response = requests.post(
+                    file_upload_url,
+                    headers=file_upload_headers,
+                    files=files,
+                    data=data
+                )
+                
+                if file_upload_response.status_code != 200:
+                    raise Exception(f"Failed to upload file: {file_upload_response.text}")
+                
+                file_id = file_upload_response.json()['id']
+                
+                openai_payload = {
+                    "model": "gpt-4",
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": "You are a UX/UI expert creating video simulations of user journeys."
+                        },
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": video_prompt
+                                },
+                                {
+                                    "type": "file",
+                                    "file": {
+                                        "file_id": file_id
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    "max_tokens": 4096
+                }
+
+                response = requests.post(
+                    "https://api.openai.com/v1/chat/completions",
+                    headers=headers,
+                    json=openai_payload
+                )
+
+                if response.status_code == 200:
+                    result = response.json()
+                    video_data = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+                    if video_data:
+                        return process_video_data(video_data)
+
+                # If video generation fails, try to generate a GIF
+                print("Video generation failed, falling back to GIF...")
+                
+                gif_prompt = f"""
+                Create a 10-second GIF simulation of this user journey:
+                Task: {{task_description}}
+                Design: [Figma file attached]
+                
+                Requirements:
+                1. Show key interaction steps
+                2. Highlight important clicks
+                3. Add brief text overlays
+                4. Keep it under 10 seconds
+                5. Focus on main user flow
+                
+                Return as animated GIF.
+                """
+
+                openai_payload["messages"][1]["content"][0]["text"] = gif_prompt
+
+                response = requests.post(
+                    "https://api.openai.com/v1/chat/completions",
+                    headers=headers,
+                    json=openai_payload
+                )
+
+                if response.status_code == 200:
+                    result = response.json()
+                    gif_data = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+                    if gif_data:
+                        # Save as GIF instead of MP4
+                        with tempfile.NamedTemporaryFile(delete=False, suffix='.gif') as temp_file:
+                            temp_file.write(gif_data.encode())
+                            temp_file_path = temp_file.name
+
+                        # Save to media storage
+                        gif_path = f'simulations/simulation.gif'
+                        with open(temp_file_path, 'rb') as gif_file:
+                            default_storage.save(gif_path, ContentFile(gif_file.read()))
+
+                        # Clean up temporary file
+                        os.unlink(temp_file_path)
+
+                        # Return the URL to the GIF
+                        gif_url = default_storage.url(gif_path)
+                        return JsonResponse({"gif_url": gif_url})
+
+                return JsonResponse({"error": "Failed to generate both video and GIF."}, status=500)
+
+            except Exception as e:
+                print(f"OpenAI error: {str(e)}")
+                return JsonResponse({"error": f"Failed to generate simulation: {str(e)}"}, status=500)
+            finally:
+                # Clean up temporary files if they still exist
+                if os.path.exists(temp_file_path):
+                    os.unlink(temp_file_path)
+
         elif design_data['type'] == 'file':
             # Handle uploaded file
             file = request.FILES.get('file')
@@ -182,112 +334,6 @@ def generate_simulation(request):
                 design_data = response.json()
             except Exception as e:
                 return JsonResponse({"error": f"Failed to process URL: {str(e)}"}, status=400)
-
-        # Prepare the prompt for video generation
-        prompt = f"""
-        Create a video simulation of a user journey through this design:
-        
-        Task: {task_description}
-        
-        Design Data: {json.dumps(design_data)}
-        
-        The video should:
-        1. Show the exact sequence of interactions needed to complete the task
-        2. Highlight each click/tap with a visual indicator
-        3. Include brief text overlays explaining each action
-        4. Demonstrate proper timing between actions (realistic user behavior)
-        5. Point out any potential UX issues or improvements
-        6. Maintain a professional and educational tone
-        """
-
-        try:
-            # Try OpenAI first
-            headers = {
-                'Authorization': f'Bearer {OPENAI_API_KEY}',
-                'Content-Type': 'application/json',
-            }
-
-            openai_payload = {
-                "model": "gpt-4",
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": "You are a UX/UI expert creating video simulations of user journeys."
-                    },
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": prompt
-                            }
-                        ]
-                    }
-                ],
-                "max_tokens": 4096
-            }
-
-            response = requests.post(
-                "https://api.openai.com/v1/chat/completions",
-                headers=headers,
-                json=openai_payload
-            )
-
-            if response.status_code == 200:
-                result = response.json()
-                video_data = result.get("choices", [{}])[0].get("message", {}).get("content", "")
-                if video_data:
-                    return process_video_data(video_data)
-            
-            # If we get here, OpenAI failed or returned no data
-            print("OpenAI failed, falling back to Gemini...")
-            
-        except Exception as e:
-            print(f"OpenAI error: {str(e)}, falling back to Gemini...")
-
-        # Fallback to Gemini video generation
-        try:
-            # Generate video using Gemini
-            operation = client.models.generate_videos(
-                model="veo-2.0-generate-001",
-                prompt=prompt,
-                config=types.GenerateVideosConfig(
-                    person_generation="dont_allow",
-                    aspect_ratio="16:9",
-                ),
-            )
-
-            # Wait for video generation to complete
-            while not operation.done:
-                time.sleep(20)
-                operation = client.operations.get(operation)
-
-            # Process generated videos
-            for n, generated_video in enumerate(operation.response.generated_videos):
-                # Download the video
-                video_data = client.files.download(file=generated_video.video)
-                
-                # Save to temporary file
-                with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as temp_file:
-                    temp_file.write(video_data)
-                    temp_file_path = temp_file.name
-
-                # Save to media storage
-                video_path = f'simulations/simulation_{n}.mp4'
-                with open(temp_file_path, 'rb') as video_file:
-                    default_storage.save(video_path, ContentFile(video_file.read()))
-
-                # Clean up temporary file
-                os.unlink(temp_file_path)
-
-                # Return the URL to the video
-                video_url = default_storage.url(video_path)
-                return JsonResponse({"video_url": video_url})
-
-            return JsonResponse({"error": "No videos were generated."}, status=500)
-
-        except Exception as e:
-            return JsonResponse({"error": f"Both OpenAI and Gemini failed: {str(e)}"}, status=500)
 
     except Exception as e:
         return JsonResponse({"error": f"An error occurred: {str(e)}"}, status=500)
@@ -395,7 +441,7 @@ def call_openai_heatmap(figma_data, user_prompt=''):
     )
 
     headers = {
-        'Authorization': f'Bearer {OPENAI_API_KEY}',
+        'Authorization': f'Bearer {OPENAI_API_KEY_SULTAN}',
         'Content-Type': 'application/json',
     }
     openai_payload = {
@@ -448,14 +494,22 @@ def call_gemini_heatmap(figma_data, user_prompt=''):
 
     # Try models in order of preference
     model_names = [
+        "gemini-1.5-pro-latest",
+        "gemini-1.5-pro",
+        "gemini-2.0-flash",
+        "gemini-2.5-flash-preview-05-20",
+        "gemini-2.5-flash-preview-tts",
+        "gemini-2.5-pro-preview-05-06",
+        "gemini-2.5-pro-preview-tts",
+        "gemini-2.0-flash",
         "gemini-2.0-flash-preview-image-generation",
-        "gemini-2.0-flash-preview-video-generation",
-        "gemini-2.5-flash-preview-video-generation",
-        "gemini-2.5-pro-preview-video-generation",
-        "veo-2.0-generate-001",  # Video generation model
-        "gemini-2.0-flash-live-001",  # Video generation model
+        "gemini-2.0-flash-lite",
+        "gemini-1.5-flash",
+        "gemini-1.5-flash-8b",
+        "veo-2.0-generate-001",
+        "gemini-2.0-flash-live-001",
     ]
-    
+
     last_error = None
     for model_name in model_names:
         try:

@@ -1,0 +1,40 @@
+{
+  "steps": [
+    {
+      "frame_url": "/simulations/images/1J2MSZzASUTEKNrrQm5o8b_8b0a91cc-b355-415a-b24e-b06e8853a28f.png",
+      "action": "Navigate to Frame 4605",
+      "duration": 3,
+      "overlay_text": "Step 1: Open Frame 4605"
+    },
+    {
+      "frame_url": "/simulations/images/1J2MSZzASUTEKNrrQm5o8b_be20e10e-5d63-424f-9731-18743a59f71d.png",
+      "action": "Navigate to Frame 1000005111",
+      "duration": 3,
+      "overlay_text": "Step 2: Move to Frame 1000005111"
+    },
+    {
+      "frame_url": "/simulations/images/1J2MSZzASUTEKNrrQm5o8b_be20e10e-5d63-424f-9731-18743a59f71d.png",
+      "action": "Click on name field",
+      "duration": 2,
+      "overlay_text": "Step 3: Click on the name field"
+    },
+    {
+      "frame_url": "/simulations/images/1J2MSZzASUTEKNrrQm5o8b_be20e10e-5d63-424f-9731-18743a59f71d.png",
+      "action": "Type new name",
+      "duration": 4,
+      "overlay_text": "Step 4: Enter the new name"
+    },
+    {
+      "frame_url": "/simulations/images/1J2MSZzASUTEKNrrQm5o8b_d2955bae-a567-42bb-9da6-fdb6b7395548.png",
+      "action": "Navigate to Frame 1000005114",
+      "duration": 3,
+      "overlay_text": "Step 5: Confirm the changes on Frame 1000005114"
+    },
+    {
+      "frame_url": "/simulations/images/1J2MSZzASUTEKNrrQm5o8b_d2955bae-a567-42bb-9da6-fdb6b7395548.png",
+      "action": "Finish",
+      "duration": 5,
+      "overlay_text": "Step 6: Task completed successfully"
+    }
+  ]
+}

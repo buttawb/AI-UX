@@ -1,5 +1,8 @@
 from django.urls import path
 from . import views
+from . import helpers
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     # For uploading design files (though we fetch Figma files directly)
@@ -15,5 +18,9 @@ urlpatterns = [
 
     # New simulation routes
     path('simulation/', views.simulation_view, name='simulation_view'),
-    path('generate_simulation/', views.generate_simulation, name='generate_simulation'),
+    path('generate_simulation/', helpers.generate_simulation, name='generate_simulation'),
 ]
+
+# Add media URLs in development
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
