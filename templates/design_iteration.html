@@ -1,0 +1,600 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Design Enhancement - UX Tester</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <style>
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: var(--text-light);
+        }
+
+        .design-form {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .form-text {
+            display: block;
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--text-light);
+        }
+
+        .submit-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, var(--primary), #4f46e5);
+            color: white;
+            border: none;
+            border-radius: var(--radius);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .submit-btn .icon {
+            font-size: 1.2rem;
+        }
+
+        .loader {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .result-container {
+            display: none;
+            margin-top: 2rem;
+        }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .result-card {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+        }
+
+        .result-card h3 {
+            color: var(--primary);
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+        }
+
+        .result-image {
+            width: 100%;
+            border-radius: var(--radius);
+            margin-bottom: 1rem;
+        }
+
+        .improvements-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .improvements-list li {
+            padding: 0.75rem;
+            background: var(--background);
+            border-radius: var(--radius);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .improvements-list li:before {
+            content: "✨";
+            font-size: 1.2rem;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            justify-content: center;
+        }
+
+        .nav-button {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: var(--surface);
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .nav-button:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary);
+            box-shadow: var(--shadow);
+        }
+
+        .nav-button.active {
+            background: linear-gradient(135deg, var(--primary), #4f46e5);
+            color: white;
+            border-color: transparent;
+        }
+
+        .nav-button .icon {
+            font-size: 1.2rem;
+        }
+
+        .dropoff-points {
+            background: var(--background);
+            border-radius: var(--radius);
+            padding: 1rem;
+        }
+
+        .dropoff-point {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: var(--surface);
+            border-radius: var(--radius);
+            margin-bottom: 0.75rem;
+            border-left: 4px solid #ef4444;
+        }
+
+        .dropoff-point .remove-issue {
+            margin-left: auto;
+            background: none;
+            border: none;
+            color: #ef4444;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            line-height: 1;
+            opacity: 0.6;
+            transition: opacity 0.2s ease;
+        }
+
+        .dropoff-point .remove-issue:hover {
+            opacity: 1;
+        }
+
+        .add-issue-form {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .add-issue-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .add-issue-btn:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+        }
+
+        .add-issue-btn .icon {
+            font-size: 1.2rem;
+        }
+
+        .no-issues {
+            color: var(--text-light);
+            text-align: center;
+            padding: 1rem;
+            font-style: italic;
+        }
+
+        .error-message {
+            background: #fee2e2;
+            border: 1px solid #ef4444;
+            border-radius: var(--radius);
+            padding: 1rem;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: #dc2626;
+        }
+
+        .error-message .icon {
+            font-size: 1.2rem;
+        }
+
+        .info-message {
+            background: #eff6ff;
+            border: 1px solid #3b82f6;
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .info-message .icon {
+            font-size: 1.5rem;
+            color: #3b82f6;
+        }
+
+        .info-content {
+            flex: 1;
+        }
+
+        .info-content h3 {
+            color: #1e40af;
+            margin: 0 0 0.75rem 0;
+            font-size: 1.1rem;
+        }
+
+        .info-content p {
+            margin: 0 0 1rem 0;
+            color: #1e40af;
+        }
+
+        .info-content ol {
+            margin: 0;
+            padding-left: 1.5rem;
+            color: #1e40af;
+        }
+
+        .info-content li {
+            margin-bottom: 0.5rem;
+        }
+
+        .info-content a {
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .info-content a:hover {
+            text-decoration: underline;
+        }
+    </style>
+    <script>
+        // Add static URL prefix for JavaScript
+        const STATIC_URL = "{% static '' %}";
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>AI Design Enhancement</h1>
+            <p>Transform your design with AI-powered improvements</p>
+        </div>
+
+        {% if error %}
+        <div class="error-message">
+            <span class="icon">⚠️</span>
+            <span>{{ error }}</span>
+        </div>
+        {% endif %}
+
+        {% if is_direct_access %}
+        <div class="info-message">
+            <span class="icon">ℹ️</span>
+            <div class="info-content">
+                <h3>Welcome to AI Design Enhancement!</h3>
+                <p>This tool helps improve your designs by addressing UX issues. For the best experience:</p>
+                <ol>
+                    <li>Start with the <a href="/ux/upload_design/">UX Analysis</a> to identify areas for improvement</li>
+                    <li>Use the "Enhance with AI" button on frames with UX scores below 80%</li>
+                    <li>Or enter your Figma details below to enhance a design directly</li>
+                </ol>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="nav-buttons">
+            <a href="/ux/upload_design/" class="nav-button">
+                <span class="icon">📊</span>
+                <span>UX Analysis</span>
+            </a>
+            <a href="/ux/simulation/" class="nav-button">
+                <span class="icon">🎬</span>
+                <span>User Journey</span>
+            </a>
+            <a href="/ux/design_iteration/" class="nav-button active">
+                <span class="icon">🔄</span>
+                <span>Design Iteration</span>
+                <span class="badge">New!</span>
+            </a>
+        </div>
+
+        <div class="warning-message">
+            <span class="icon">⚠️</span>
+            <span>Please upload 1-2 frames for optimal results</span>
+        </div>
+
+        <div class="design-form">
+            <div class="form-group">
+                <label for="figmaAccessToken">Figma Access Token</label>
+                <select id="figmaAccessToken" class="form-control">
+                    <option value="">Select a token or enter custom...</option>
+                    <option value="wahab_token" {% if token == 'wahab_token' %}selected{% endif %}>Wahab's Token</option>
+                    <option value="ramsha_token" {% if token == 'ramsha_token' %}selected{% endif %}>Ramsha's Token</option>
+                    <option value="farzam_token" {% if token == 'farzam_token' %}selected{% endif %}>Farzam's Token</option>
+                    {% comment %} <option value="custom" {% if token and token not in ['wahab_token', 'ramsha_token', 'farzam_token'] %}selected{% endif %}>Enter Custom Token</option> {% endcomment %}
+                </select>
+                <div id="customTokenInput" style="display: none; margin-top: 0.5rem;">
+                    <input type="text" id="customFigmaToken" class="form-control" placeholder="Enter your custom Figma access token" value="{{ token }}">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="figmaFileId">Figma File ID</label>
+                <input type="text" id="figmaFileId" class="form-control" value="{{ file_id }}" placeholder="Enter your Figma file ID">
+            </div>
+
+            <div class="form-group">
+                <label>UX Issues to Address</label>
+                <div class="dropoff-points">
+                    {% if dropoff_points %}
+                        {% for point in dropoff_points %}
+                        <div class="dropoff-point">
+                            <span class="icon">⚠️</span>
+                            <span>{{ point.reason }}</span>
+                            <button class="remove-issue" data-index="{{ forloop.counter0 }}">×</button>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="no-issues">No UX issues to address</p>
+                    {% endif %}
+                    <div class="add-issue-form">
+                        <input type="text" id="newIssue" class="form-control" placeholder="Add a UX issue to address...">
+                        <button id="addIssue" class="add-issue-btn">
+                            <span class="icon">+</span>
+                            <span>Add Issue</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <button id="submitBtn" class="submit-btn">
+                <span class="icon">✨</span>
+                <span>Generate Enhanced Design</span>
+            </button>
+        </div>
+
+        <div id="loader" class="loader">
+            <div class="spinner"></div>
+            <p>Generating enhanced design... This may take a few minutes</p>
+        </div>
+
+        <div id="resultContainer" class="result-container">
+            <div class="result-grid">
+                <div class="result-card">
+                    <h3>Original Design</h3>
+                    <img id="originalImage" class="result-image" src="" alt="Original design">
+                </div>
+                <div class="result-card">
+                    <h3>Enhanced Design</h3>
+                    <img id="enhancedImage" class="result-image" src="" alt="Enhanced design">
+                    {% comment %} <h4>Key Improvements</h4> {% endcomment %}
+                    {% comment %} <ul id="improvementsList" class="improvements-list"></ul> {% endcomment %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            const $submitBtn = $('#submitBtn');
+            const $loader = $('#loader');
+            const $resultContainer = $('#resultContainer');
+            const $customTokenInput = $('#customTokenInput');
+            const $figmaAccessToken = $('#figmaAccessToken');
+
+            // Handle token selection
+            $figmaAccessToken.on('change', function() {
+                if ($(this).val() === 'custom') {
+                    $customTokenInput.show();
+                } else {
+                    $customTokenInput.hide();
+                }
+            });
+
+            // Helper function to get the selected token
+            function getSelectedToken() {
+                const selectedValue = $figmaAccessToken.val();
+                if (selectedValue === 'custom') {
+                    return $('#customFigmaToken').val();
+                }
+                return selectedValue;
+            }
+
+            // Handle adding new issues
+            $('#addIssue').on('click', function() {
+                const newIssue = $('#newIssue').val().trim();
+                if (newIssue) {
+                    const issueIndex = $('.dropoff-point').length;
+                    const issueHtml = `
+                        <div class="dropoff-point">
+                            <span class="icon">⚠️</span>
+                            <span>${newIssue}</span>
+                            <button class="remove-issue" data-index="${issueIndex}">×</button>
+                        </div>
+                    `;
+                    $('.dropoff-points').prepend(issueHtml);
+                    $('#newIssue').val('');
+                }
+            });
+
+            // Handle removing issues
+            $(document).on('click', '.remove-issue', function() {
+                $(this).closest('.dropoff-point').remove();
+            });
+
+            // Handle Enter key in new issue input
+            $('#newIssue').on('keypress', function(e) {
+                if (e.which === 13) {
+                    e.preventDefault();
+                    $('#addIssue').click();
+                }
+            });
+
+            $submitBtn.on('click', async function() {
+                const figmaToken = getSelectedToken();
+                const fileId = $('#figmaFileId').val();
+
+                if (!figmaToken) {
+                    alert("Please select or enter a Figma access token");
+                    return;
+                }
+
+                if (!fileId) {
+                    alert("Please enter a Figma file ID");
+                    return;
+                }
+
+                $submitBtn.prop('disabled', true);
+                $loader.show();
+                $resultContainer.hide();
+
+                // Collect all issues
+                const dropoffPoints = [];
+                $('.dropoff-point').each(function() {
+                    dropoffPoints.push({
+                        reason: $(this).find('span:not(.icon)').text()
+                    });
+                });
+
+                try {
+                    const response = await $.ajax({
+                        url: '/ux/generate_iteration/',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            figma_token: figmaToken,
+                            design_data: {
+                                id: fileId
+                            },
+                            dropoff_points: dropoffPoints
+                        })
+                    });
+
+                    if (response.status === 'success') {
+                        // Display original image
+                        $('#originalImage').attr('src', 'data:image/png;base64,' + response.data.original_images[0].image);
+                        
+                        // Display enhanced image
+                        $('#enhancedImage').attr('src', 'data:image/png;base64,' + response.data.improved_design.image);
+                        
+                        // Display improvements
+                        const $improvementsList = $('#improvementsList');
+                        $improvementsList.empty();
+                        response.data.improved_design.key_changes.forEach(change => {
+                            $improvementsList.append(`<li>${change}</li>`);
+                        });
+
+                        $resultContainer.show();
+                    } else {
+                        throw new Error(response.message || 'Failed to generate iteration');
+                    }
+                } catch (error) {
+                    alert(error.message || 'An error occurred while generating the iteration');
+                } finally {
+                    $submitBtn.prop('disabled', false);
+                    $loader.hide();
+                }
+            });
+
+            // Initialize token input visibility
+            if ($figmaAccessToken.val() === 'custom') {
+                $customTokenInput.show();
+            }
+        });
+    </script>
+</body>
+</html> 

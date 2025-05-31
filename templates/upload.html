@@ -160,6 +160,12 @@
             border-color: #1B5E20;
         }
 
+        .viz-toggle-checkbox:checked + .viz-toggle-btn.enhance-btn {
+            background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+            color: white;
+            border-color: #5b21b6;
+        }
+
         .heatmap-layer,
         .reach-layer {
             position: absolute;
@@ -237,7 +243,7 @@
         .heatmap-container {
             position: relative;
             border-radius: var(--radius);
-            overflow: hidden;
+            overflow: visible;
             background-color: var(--background);
             box-shadow: var(--shadow);
             width: 100%;
@@ -388,6 +394,17 @@
             min-height: 0;
             overflow-y: auto;
             max-height: none;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .ux-report pre {
+            display: none;
+        }
+
+        .ux-report:hover pre {
+            display: none;
         }
 
         .ux-report h2 {
@@ -615,6 +632,108 @@
         .file-upload-label .icon {
             font-size: 1.5rem;
         }
+
+        .ux-score-container {
+            position: relative;
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: linear-gradient(135deg, var(--primary), #4f46e5);
+            color: white;
+            border-radius: var(--radius);
+            font-weight: 500;
+            box-shadow: var(--shadow);
+        }
+
+        .ux-score-container.poor {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+
+        .ux-score-container .ux-score-value {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .enhancement-sticker {
+            position: absolute;
+            top: -0.75rem;
+            left: -0.75rem;
+            background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+            color: white;
+            padding: 0.5rem 0.75rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            text-decoration: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            transition: all 0.3s ease;
+            border: 2px solid white;
+        }
+
+        .enhancement-sticker:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+            color: white;
+        }
+
+        .enhancement-sticker .icon {
+            font-size: 1rem;
+        }
+
+        .enhancement-sticker .badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.15rem 0.35rem;
+            border-radius: 8px;
+            font-size: 0.7rem;
+        }
+
+        .frame-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .heatmap-container {
+            position: relative;
+            border-radius: var(--radius);
+            overflow: hidden;
+            background-color: var(--background);
+            box-shadow: var(--shadow);
+            width: 100%;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .enhance-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+            width: 100%;
+            text-align: center;
+        }
+
+        .enhance-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
     </style>
 </head>
 <body>
@@ -633,6 +752,11 @@
             <a href="/ux/simulation/" class="nav-button">
                 <span class="icon">🎬</span>
                 <span>User Journey</span>
+                <span class="badge">New!</span>
+            </a>
+            <a href="/ux/design_iteration/" class="nav-button">
+                <span class="icon">🔄</span>
+                <span>Design Iteration</span>
                 <span class="badge">New!</span>
             </a>
         </div>
@@ -941,7 +1065,13 @@
                           console.warn(`Skipping frame "${frame.name}" (${frame.id}) due to missing image URL or analysis data for this specific frame.`);
                           return; // Safely skip this frame
                       }
-  
+
+                      // Store frame analysis data globally
+                      if (!window.frameAnalysisData) {
+                          window.frameAnalysisData = {};
+                      }
+                      window.frameAnalysisData[frame.id] = frameAnalysis;
+
                       // Create the HTML structure for this frame
                       const safeId = frame.id.replace(/:/g, '-');
                       const uxScore = frameAnalysis.ux_score || 0;
@@ -1009,6 +1139,10 @@
                                                       <span class="viz-label">Positive Points</span>
                                                   </span>
                                               </label>
+                                              <button class="enhance-btn" data-frame="${safeId}">
+                                                  <span class="viz-icon">🎨</span>
+                                                  <span class="viz-label">Enhance Design</span>
+                                              </button>
                                           </div>
                                       </div>
                                       <div class="heatmap-container" id="heatmap-container-${safeId}">
@@ -1019,7 +1153,9 @@
                                   </div>
                                   <div class="report-column">
                                       <h2>UX/UI Report</h2>
-                                      <div class="ux-report" id="report-${safeId}">${frameAnalysis.report}</div>
+                                      <div class="ux-report" id="report-${safeId}">
+                                          ${typeof frameAnalysis.report === 'string' ? frameAnalysis.report : JSON.stringify(frameAnalysis.report, null, 2)}
+                                      </div>
                                       <div class="reach-legend" id="reach-legend-${safeId}">
                                           <h4>Thumb Reach Zones</h4>
                                           <div class="legend-item">
@@ -1716,6 +1852,33 @@
                   container.find('.ux-positive-marker').toggleClass('active', isChecked);
               }
           });
+          
+
+          $(document).on('click', '.enhance-btn', function() {
+            const frameId = $(this).data('frame');
+            const figmaFileId = $('#figmaFileId').val();
+            const figmaToken = getSelectedToken();
+    
+            console.log('Enhance button clicked for frame:', frameId);
+            console.log('Frame analysis data:', window.frameAnalysisData);
+    
+            const frameAnalysis = window.frameAnalysisData?.[frameId];
+    
+            if (!frameAnalysis) {
+                console.error('No analysis data found for frame:', frameId);
+                alert('No analysis data available for this frame. Please run the analysis first.');
+                return;
+            }
+    
+            if (frameAnalysis.drop_off_points) {
+                const url = `/ux/design_iteration/?file_id=${figmaFileId}&token=${encodeURIComponent(figmaToken)}&frame_id=${frameId}&dropoffs=${encodeURIComponent(JSON.stringify(frameAnalysis.drop_off_points))}`;
+                console.log('Opening URL:', url);
+                window.open(url, '_blank');
+            } else {
+                console.warn('No drop-off points found for frame:', frameId);
+                alert('No drop-off points available for enhancement.');
+            }
+        });
           
           // Initialize default state - all layers and markers hidden
           $(document).ready(function() {
