@@ -531,6 +531,90 @@
             color: white;
             border-color: #4338ca;
         }
+
+        .input-method-selector {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .input-method-card {
+            background: var(--surface);
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .input-method-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary);
+            box-shadow: var(--shadow);
+        }
+
+        .input-method-card.active {
+            border-color: var(--primary);
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.05), rgba(79, 70, 229, 0.05));
+        }
+
+        .input-method-card .icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+
+        .input-method-card h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+        }
+
+        .input-method-card p {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            margin: 0;
+        }
+
+        .file-upload-container {
+            position: relative;
+            margin-top: 1rem;
+        }
+
+        .file-upload-input {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .file-upload-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 1rem;
+            background: var(--background);
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            color: var(--text-light);
+            transition: all 0.2s ease;
+        }
+
+        .file-upload-label:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .file-upload-label .icon {
+            font-size: 1.5rem;
+        }
     </style>
 </head>
 <body>
@@ -568,11 +652,55 @@
                 </div>
                 <small class="form-text">Select a predefined token or enter your own Figma access token</small>
             </div>
-            <div class="form-group">
-                <label for="figmaFileId">Figma File ID</label>
-                <input type="text" id="figmaFileId" value="{{ figma_file_id }}" class="form-control" placeholder="Enter your Figma file ID">
-                <small class="form-text">The unique identifier of your Figma file to analyze</small>
+
+            <div class="input-method-selector">
+                <div class="input-method-card" data-method="figma">
+                    <div class="icon">🎨</div>
+                    <h3>Figma File</h3>
+                    <p>Enter your Figma file ID to analyze</p>
+                </div>
+                <div class="input-method-card" data-method="upload">
+                    <div class="icon">📁</div>
+                    <h3>Upload Design</h3>
+                    <p>Upload your design file directly</p>
+                </div>
+                <div class="input-method-card" data-method="url">
+                    <div class="icon">🔗</div>
+                    <h3>Design URL</h3>
+                    <p>Provide a URL to your design</p>
+                </div>
             </div>
+
+            <div id="figmaInput" class="input-section">
+                <div class="form-group">
+                    <label for="figmaFileId">Figma File ID</label>
+                    <input type="text" id="figmaFileId" value="{{ figma_file_id }}" class="form-control" placeholder="Enter your Figma file ID">
+                    <small class="form-text">The unique identifier of your Figma file to analyze</small>
+                </div>
+            </div>
+
+            <div id="uploadInput" class="input-section" style="display: none;">
+                <div class="form-group">
+                    <label>Upload Design File</label>
+                    <div class="file-upload-container">
+                        <input type="file" id="designFile" class="file-upload-input" accept=".fig,.sketch,.xd">
+                        <label for="designFile" class="file-upload-label">
+                            <span class="icon">📁</span>
+                            <span>Click to upload or drag and drop</span>
+                        </label>
+                    </div>
+                    <small class="form-text">Supported formats: Figma (.fig)</small>
+                </div>
+            </div>
+
+            <div id="urlInput" class="input-section" style="display: none;">
+                <div class="form-group">
+                    <label for="designUrl">Design URL</label>
+                    <input type="url" id="designUrl" class="form-control" placeholder="Enter the URL to your design">
+                    <small class="form-text">Provide a direct link to your design file</small>
+                </div>
+            </div>
+
             <div class="form-group">
                 <label for="userPrompt">Custom Analysis Instructions</label>
                 <textarea id="userPrompt" class="form-control" rows="4" placeholder="Add specific instructions for the analysis (e.g., focus on mobile responsiveness, accessibility, or specific user flows)"></textarea>
@@ -606,12 +734,39 @@
     
     <script>
       $(document).ready(function() {
+          const $inputMethods = $('.input-method-card');
+          const $inputSections = $('.input-section');
           const $submitBtn = $('#submitBtn');
           const $loader = $('#loader');
           const $analysisContainer = $('#analysisContainer');
           const $loadingText = $('#loadingText');
           const $customTokenInput = $('#customTokenInput');
           const $figmaAccessToken = $('#figmaAccessToken');
+
+          // Set Figma File as default - more explicit initialization
+          function initializeDefaultInput() {
+              // Remove active class from all methods
+              $inputMethods.removeClass('active');
+              // Hide all input sections
+              $inputSections.hide();
+              
+              // Set Figma as active
+              $('.input-method-card[data-method="figma"]').addClass('active');
+              // Show Figma input section
+              $('#figmaInput').show();
+          }
+
+          // Call initialization on page load
+          initializeDefaultInput();
+
+          // Handle input method selection
+          $inputMethods.on('click', function() {
+              const method = $(this).data('method');
+              $inputMethods.removeClass('active');
+              $(this).addClass('active');
+              $inputSections.hide();
+              $(`#${method}Input`).show();
+          });
 
           // Handle token selection
           $figmaAccessToken.on('change', function() {
@@ -644,16 +799,53 @@
           }
   
           $submitBtn.on('click', async function() {
+              const activeMethod = $('.input-method-card.active').data('method');
+              const userPrompt = $('#userPrompt').val();
+              const figmaToken = getSelectedToken();
+
+              if (!figmaToken) {
+                  alert("Please select or enter a Figma access token");
+                  return;
+              }
+
+              let designData = null;
+              switch (activeMethod) {
+                  case 'figma':
+                      const figmaId = $('#figmaFileId').val();
+                      if (!figmaId) {
+                          alert('Please enter a Figma file ID');
+                          return;
+                      }
+                      designData = { type: 'figma', id: figmaId };
+                      break;
+                  case 'upload':
+                      const file = $('#designFile')[0].files[0];
+                      if (!file) {
+                          alert('Please upload a design file');
+                          return;
+                      }
+                      designData = { type: 'file', file: file };
+                      break;
+                  case 'url':
+                      const url = $('#designUrl').val();
+                      if (!url) {
+                          alert('Please enter a design URL');
+                          return;
+                      }
+                      designData = { type: 'url', url: url };
+                      break;
+              }
+
               $submitBtn.prop('disabled', true);
               $loader.show();
               $analysisContainer.empty().hide();
-  
+              clearAnalysisData(); // Clear old data when starting new analysis
+
               try {
                   // 1. Fetch the entire Figma file structure
                   console.log("Fetching Figma file structure...");
                   await updateLoadingText('Fetching Figma file structure...');
                   const figmaFileId = $('#figmaFileId').val();
-                  const userPrompt = $('#userPrompt').val();
                   const figmaToken = getSelectedToken();
                   
                   if (!figmaToken) {
