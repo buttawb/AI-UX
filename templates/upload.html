@@ -839,7 +839,6 @@
               $submitBtn.prop('disabled', true);
               $loader.show();
               $analysisContainer.empty().hide();
-              clearAnalysisData(); // Clear old data when starting new analysis
 
               try {
                   // 1. Fetch the entire Figma file structure
@@ -1854,18 +1853,6 @@
               container.innerHTML = '';
               container.appendChild(reportContainer);
           }
-
-          // Update the frame rendering code to use the new report renderer
-          frames.forEach(frame => {
-              // ... existing frame rendering code ...
-              
-              // When rendering the report, use the new renderer
-              if (frameAnalysis && frameAnalysis.report) {
-                  renderReport(frameAnalysis.report, `report-${safeId}`);
-              }
-              
-              // ... rest of the existing frame rendering code ...
-          });
       });
       </script>
 </body>
