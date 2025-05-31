@@ -84,12 +84,6 @@
                     <h2>Original Design</h2>
                 </div>
                 <img id="originalImage" class="iteration-image" src="" alt="Original Design">
-                <div class="key-changes">
-                    <h3>Original Strengths</h3>
-                    <ul id="originalStrengths" class="strengths-list">
-                        <!-- Will be populated by JavaScript -->
-                    </ul>
-                </div>
             </div>
 
             <!-- Improved Design -->
@@ -98,20 +92,6 @@
                     <h2>Improved Design</h2>
                 </div>
                 <img id="improvedImage" class="iteration-image" src="" alt="Improved Design">
-                <div class="key-changes">
-                    <h3>Key Improvements</h3>
-                    <ul id="improvementsList" class="improvements-list">
-                        <!-- Will be populated by JavaScript -->
-                    </ul>
-                </div>
-            </div>
-
-            <!-- Comparison Section -->
-            <div class="comparison-section">
-                <h3>Design Comparison</h3>
-                <div id="comparisonRationale" class="rationale">
-                    <!-- Will be populated by JavaScript -->
-                </div>
             </div>
         </div>
     </div>
@@ -197,40 +177,8 @@
                         // Update original design
                         $('#originalImage').attr('src', `data:image/png;base64,${data.original_images[0].image}`);
                         
-                        // Update improved design - handle PIL Image response
-                        if (data.improved_design.images && data.improved_design.images[0]) {
-                            const improvedImage = data.improved_design.images[0];
-                            // Convert PIL Image to data URL
-                            const canvas = document.createElement('canvas');
-                            const ctx = canvas.getContext('2d');
-                            const img = new Image();
-                            
-                            img.onload = function() {
-                                canvas.width = img.width;
-                                canvas.height = img.height;
-                                ctx.drawImage(img, 0, 0);
-                                const dataUrl = canvas.toDataURL('image/png');
-                                $('#improvedImage').attr('src', dataUrl);
-                            };
-                            
-                            // Convert the image data to a blob URL
-                            const blob = new Blob([improvedImage], { type: 'image/png' });
-                            img.src = URL.createObjectURL(blob);
-                        }
-                        
-                        // Update strengths and improvements
-                        const $originalStrengths = $('#originalStrengths').empty();
-                        data.comparison.original_strengths.forEach(strength => {
-                            $originalStrengths.append(`<li>${strength}</li>`);
-                        });
-
-                        const $improvementsList = $('#improvementsList').empty();
-                        data.improved_design.key_changes.forEach(change => {
-                            $improvementsList.append(`<li>${change}</li>`);
-                        });
-
-                        // Update rationale
-                        $('#comparisonRationale').text(data.comparison.rationale);
+                        // Update improved design
+                        $('#improvedImage').attr('src', `data:image/png;base64,${data.improved_design.image}`);
 
                         // Show the iteration container
                         $iterationContainer.show();
