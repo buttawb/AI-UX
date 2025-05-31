@@ -154,6 +154,12 @@
             border-color: #B71C1C;
         }
 
+        .viz-toggle-checkbox:checked + .viz-toggle-btn.positives-btn {
+            background: linear-gradient(135deg, #4CAF50, #2E7D32);
+            color: white;
+            border-color: #1B5E20;
+        }
+
         .heatmap-layer,
         .reach-layer {
             position: absolute;
@@ -235,20 +241,44 @@
             background-color: var(--background);
             box-shadow: var(--shadow);
             width: 100%;
+            flex: 1;
+            min-height: 0;
         }
 
         .report-column {
-            width: 400px;
+            width: 45%;
             padding-left: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            height: 100%;
+        }
+
+        .analysis-content {
+            display: flex;
+            gap: 2rem;
+            width: 100%;
+            height: 100%;
+            min-height: 600px;
+        }
+
+        .design-column {
+            width: 55%;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
         }
 
         .reach-legend {
-            margin-top: 2rem;
-            padding: 1rem;
+            margin-top: 0;
+            padding: 1.25rem;
             background: #fff;
-            border-radius: 8px;
+            border-radius: 12px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             display: none;
+            border-left: 4px solid #3b82f6;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            flex-shrink: 0;
         }
 
         .reach-legend.active {
@@ -257,9 +287,11 @@
 
         .reach-legend h4 {
             margin: 0 0 1rem 0;
-            font-size: 1rem;
+            font-size: 1.1rem;
             font-weight: 600;
-            color: #1a1a1a;
+            color: #2563eb;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #e2e8f0;
         }
 
         .legend-item {
@@ -267,6 +299,15 @@
             align-items: center;
             gap: 0.75rem;
             margin-bottom: 0.75rem;
+            padding: 0.5rem;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .legend-item:hover {
+            background: rgba(255, 255, 255, 0.8);
+            transform: translateX(4px);
         }
 
         .legend-item:last-child {
@@ -274,26 +315,221 @@
         }
 
         .color-box {
-            width: 16px;
-            height: 16px;
-            border-radius: 4px;
+            width: 20px;
+            height: 20px;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .color-box.easy {
-            background: rgba(46, 213, 115, 1);
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
         }
 
         .color-box.stretch {
-            background: rgba(255, 204, 0, 1);
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
         }
 
         .color-box.hard {
-            background: rgba(231, 76, 60, 1);
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
         }
 
-        .design-column {
+        .legend-item span {
+            font-size: 0.9rem;
+            color: #1e293b;
+            font-weight: 500;
+        }
+
+        .legend-item .description {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-top: 0.25rem;
+        }
+
+        .ux-positive-marker {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+            cursor: pointer;
+            z-index: 10;
+            background: rgba(99, 102, 241, 0.9);
+            border: 2px solid #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .ux-positive-marker span {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 1;
+            text-align: center;
+            width: 100%;
+        }
+
+        .ux-positive-marker.active {
+            display: block;
+        }
+
+        .ux-report {
+            background: #fff;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+            line-height: 1.6;
             flex: 1;
-            min-width: 0; /* Prevents flex item from overflowing */
+            min-height: 0;
+            overflow-y: auto;
+            max-height: none;
+        }
+
+        .ux-report h2 {
+            color: var(--primary);
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 1.5rem 0 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--primary);
+        }
+
+        .ux-report h2:first-child {
+            margin-top: 0;
+        }
+
+        .ux-report ul {
+            list-style: none;
+            padding: 0;
+            margin: 0.75rem 0;
+        }
+
+        .ux-report li {
+            position: relative;
+            padding-left: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .ux-report li:before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        .ux-report p {
+            margin: 0.75rem 0;
+            color: #4a5568;
+        }
+
+        .report-section {
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: #f8fafc;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .report-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .report-section h2 {
+            color: var(--primary);
+            font-size: 1.1rem;
+            margin: 0 0 0.75rem 0;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .report-section ul {
+            margin: 0;
+            padding: 0;
+        }
+
+        .report-section li {
+            margin-bottom: 0.5rem;
+            padding-left: 1.25rem;
+            position: relative;
+        }
+
+        .report-section li:before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: var(--primary);
+        }
+
+        .report-section.overall {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        }
+
+        .report-section.strengths {
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            border-left-color: #22c55e;
+        }
+
+        .report-section.strengths h2 {
+            color: #16a34a;
+        }
+
+        .report-section.improvements {
+            background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+            border-left-color: #f97316;
+        }
+
+        .report-section.improvements h2 {
+            color: #ea580c;
+        }
+
+        .report-section.recommendations {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border-left-color: #3b82f6;
+        }
+
+        .report-section.recommendations h2 {
+            color: #2563eb;
+        }
+
+        .positive-popup {
+            position: absolute;
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            max-width: 300px;
+            display: none;
+        }
+
+        .positive-popup.active {
+            display: block;
+        }
+
+        .positive-popup h3 {
+            color: #6366f1;
+            margin: 0 0 0.5rem 0;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .positive-popup p {
+            margin: 0;
+            color: #4b5563;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .viz-toggle-checkbox:checked + .viz-toggle-btn.positives-btn {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            color: white;
+            border-color: #4338ca;
         }
     </style>
 </head>
@@ -575,6 +811,13 @@
                                                       <span class="viz-label">Drop-offs</span>
                                                   </span>
                                               </label>
+                                              <label class="viz-toggle-container">
+                                                  <input type="checkbox" class="viz-toggle-checkbox" data-target="positives" data-frame="${safeId}">
+                                                  <span class="viz-toggle-btn positives-btn">
+                                                      <span class="viz-icon">✨</span>
+                                                      <span class="viz-label">Positive Points</span>
+                                                  </span>
+                                              </label>
                                           </div>
                                       </div>
                                       <div class="heatmap-container" id="heatmap-container-${safeId}">
@@ -590,15 +833,24 @@
                                           <h4>Thumb Reach Zones</h4>
                                           <div class="legend-item">
                                               <div class="color-box easy"></div>
-                                              <span>Easy reach</span>
+                                              <div>
+                                                  <span>Easy reach</span>
+                                                  <div class="description">Comfortable thumb reach zone</div>
+                                              </div>
                                           </div>
                                           <div class="legend-item">
                                               <div class="color-box stretch"></div>
-                                              <span>Stretch reach</span>
+                                              <div>
+                                                  <span>Stretch reach</span>
+                                                  <div class="description">Requires slight thumb stretch</div>
+                                              </div>
                                           </div>
                                           <div class="legend-item">
                                               <div class="color-box hard"></div>
-                                              <span>Hard reach</span>
+                                              <div>
+                                                  <span>Hard reach</span>
+                                                  <div class="description">Difficult to reach with thumb</div>
+                                              </div>
                                           </div>
                                       </div>
                                   </div>
@@ -900,7 +1152,7 @@
           }
           
           function renderSuggestions(frameAnalysis, imgElement, containerId, imgWidth, imgHeight) {
-              if (!frameAnalysis || !frameAnalysis.suggestions || !Array.isArray(frameAnalysis.suggestions)) return;
+              if (!frameAnalysis) return;
               const container = document.getElementById(containerId);
               if (!container) return;
 
@@ -917,6 +1169,11 @@
               dropoffPopup.style.position = 'absolute';
               container.appendChild(dropoffPopup);
 
+              const positivePopup = document.createElement('div');
+              positivePopup.className = 'positive-popup';
+              positivePopup.style.position = 'absolute';
+              container.appendChild(positivePopup);
+
               let activeMarker = null;
 
               // Function to center popup over the image container
@@ -930,60 +1187,116 @@
                   
                   popup.style.top = `${top}px`;
                   popup.style.left = `${left}px`;
+
+                  // Scroll the popup into view
+                  popup.scrollIntoView({ behavior: 'smooth', block: 'center' });
               }
 
               // Render suggestion markers
-              frameAnalysis.suggestions.forEach((s, idx) => {
-                  // Skip if suggestion is empty, null, or undefined
-                  if (!s.suggestion || s.suggestion.trim() === '') {
-                      console.log(`Skipping empty suggestion marker at index ${idx}`);
-                      return;
-                  }
-
-                  const marker = document.createElement('div');
-                  marker.className = 'ux-suggestion-marker';
-                  
-                  marker.style.left = `${s.x}%`;
-                  marker.style.top = `${s.y}%`;
-                  
-                  marker.innerHTML = `<span>${idx + 1}</span>`;
-                  
-                  marker.onclick = (e) => { 
-                      e.stopPropagation();
-                      
-                      // Toggle popup if clicking the same marker
-                      if (activeMarker === marker) {
-                          suggestionPopup.classList.remove('active');
-                          activeMarker = null;
+              if (frameAnalysis.suggestions && Array.isArray(frameAnalysis.suggestions)) {
+                  frameAnalysis.suggestions.forEach((s, idx) => {
+                      // Skip if suggestion is empty, null, or undefined
+                      if (!s.suggestion || s.suggestion.trim() === '') {
+                          console.log(`Skipping empty suggestion marker at index ${idx}`);
                           return;
                       }
+
+                      const marker = document.createElement('div');
+                      marker.className = 'ux-suggestion-marker';
                       
-                      // Update popup content
-                      suggestionPopup.innerHTML = `
-                          <h3>Suggestion #${idx + 1}</h3>
-                          <p>${s.suggestion}</p>
-                      `;
+                      marker.style.left = `${s.x}%`;
+                      marker.style.top = `${s.y}%`;
                       
-                      // Center popup over the image container
-                      centerPopup(suggestionPopup);
+                      marker.innerHTML = `<span>${idx + 1}</span>`;
                       
-                      // Show popup
-                      suggestionPopup.classList.add('active');
-                      dropoffPopup.classList.remove('active');
-                      activeMarker = marker;
-                  };
-                  
-                  console.log('Adding suggestion marker at:', { x: s.x, y: s.y, suggestion: s.suggestion });
-                  container.appendChild(marker);
-              });
+                      marker.onclick = (e) => { 
+                          e.stopPropagation();
+                          
+                          // Toggle popup if clicking the same marker
+                          if (activeMarker === marker) {
+                              suggestionPopup.classList.remove('active');
+                              activeMarker = null;
+                              return;
+                          }
+                          
+                          // Update popup content
+                          suggestionPopup.innerHTML = `
+                              <h3>Suggestion #${idx + 1}</h3>
+                              <p>${s.suggestion}</p>
+                          `;
+                          
+                          // Center popup over the image container
+                          centerPopup(suggestionPopup);
+                          
+                          // Show popup
+                          suggestionPopup.classList.add('active');
+                          dropoffPopup.classList.remove('active');
+                          positivePopup.classList.remove('active');
+                          activeMarker = marker;
+                      };
+                      
+                      console.log('Adding suggestion marker at:', { x: s.x, y: s.y, suggestion: s.suggestion });
+                      container.appendChild(marker);
+                  });
+              }
+
+              // Render positive points if they exist
+              if (frameAnalysis.positive_points && Array.isArray(frameAnalysis.positive_points)) {
+                  console.log('Found positive points:', frameAnalysis.positive_points);
+                  frameAnalysis.positive_points.forEach((p, idx) => {
+                      // Skip if reason is empty, null, or undefined
+                      if (!p.reason || p.reason.trim() === '') {
+                          console.log(`Skipping empty positive point marker at index ${idx}`);
+                          return;
+                      }
+
+                      const marker = document.createElement('div');
+                      marker.className = 'ux-positive-marker';
+                      
+                      marker.style.left = `${p.x}%`;
+                      marker.style.top = `${p.y}%`;
+                      
+                      marker.innerHTML = `<span>✨</span>`;
+                      
+                      marker.onclick = (e) => { 
+                          e.stopPropagation();
+                          
+                          // Toggle popup if clicking the same marker
+                          if (activeMarker === marker) {
+                              positivePopup.classList.remove('active');
+                              activeMarker = null;
+                              return;
+                          }
+                          
+                          // Update popup content
+                          positivePopup.innerHTML = `
+                              <h3>Positive Point #${idx + 1}</h3>
+                              <p>${p.reason}</p>
+                          `;
+                          
+                          // Center popup over the image container
+                          centerPopup(positivePopup);
+                          
+                          // Show popup
+                          positivePopup.classList.add('active');
+                          suggestionPopup.classList.remove('active');
+                          dropoffPopup.classList.remove('active');
+                          activeMarker = marker;
+                      };
+                      
+                      console.log('Adding positive point marker at:', { x: p.x, y: p.y, reason: p.reason });
+                      container.appendChild(marker);
+                  });
+              } else {
+                  console.log('No positive points found in frame analysis');
+              }
 
               // Render drop-off markers if they exist
-              if (frameAnalysis && frameAnalysis.drop_off_points) {
+              if (frameAnalysis.drop_off_points && Array.isArray(frameAnalysis.drop_off_points)) {
                   console.log('Found drop-off points:', frameAnalysis.drop_off_points);
                   frameAnalysis.drop_off_points.forEach((d, idx) => {
-                      // Skip if both reason and suggestion are empty, null, or undefined
-                      const content = d.reason || d.suggestion;
-                      if (!content || content.trim() === '') {
+                      // Skip if reason is empty, null, or undefined
+                      if (!d.reason || d.reason.trim() === '') {
                           console.log(`Skipping empty dropoff marker at index ${idx}`);
                           return;
                       }
@@ -1009,7 +1322,7 @@
                           // Update popup content
                           dropoffPopup.innerHTML = `
                               <h3>Drop-off Point #${idx + 1}</h3>
-                              <p>${content}</p>
+                              <p>${d.reason}</p>
                           `;
                           
                           // Center popup over the image container
@@ -1018,10 +1331,11 @@
                           // Show popup
                           dropoffPopup.classList.add('active');
                           suggestionPopup.classList.remove('active');
+                          positivePopup.classList.remove('active');
                           activeMarker = marker;
                       };
                       
-                      console.log('Adding drop-off marker at:', { x: d.x, y: d.y, content: content });
+                      console.log('Adding drop-off marker at:', { x: d.x, y: d.y, reason: d.reason });
                       container.appendChild(marker);
                   });
               } else {
@@ -1030,9 +1344,12 @@
 
               // Close popups when clicking outside
               document.addEventListener('click', (e) => {
-                  if (!e.target.closest('.ux-suggestion-marker') && !e.target.closest('.ux-dropoff-marker')) {
+                  if (!e.target.closest('.ux-suggestion-marker') && 
+                      !e.target.closest('.ux-dropoff-marker') && 
+                      !e.target.closest('.ux-positive-marker')) {
                       suggestionPopup.classList.remove('active');
                       dropoffPopup.classList.remove('active');
+                      positivePopup.classList.remove('active');
                       activeMarker = null;
                   }
               });
@@ -1204,6 +1521,8 @@
                   container.find('.ux-suggestion-marker').toggleClass('active', isChecked);
               } else if (target === 'dropoffs') {
                   container.find('.ux-dropoff-marker').toggleClass('active', isChecked);
+              } else if (target === 'positives') {
+                  container.find('.ux-positive-marker').toggleClass('active', isChecked);
               }
           });
           
@@ -1214,6 +1533,7 @@
               $('.reach-legend').removeClass('active');
               $('.ux-suggestion-marker').removeClass('active');
               $('.ux-dropoff-marker').removeClass('active');
+              $('.ux-positive-marker').removeClass('active');
               // Ensure all checkboxes are unchecked by default
               $('.viz-toggle-checkbox').prop('checked', false);
           });
@@ -1264,6 +1584,84 @@
                   }
               });
           }
+
+          function renderReport(reportText, containerId) {
+              const container = document.getElementById(containerId);
+              if (!container) return;
+
+              // Split the report into sections
+              const sections = reportText.split('##').filter(section => section.trim());
+              
+              // Create the report container
+              const reportContainer = document.createElement('div');
+              reportContainer.className = 'ux-report';
+
+              sections.forEach(section => {
+                  const [title, ...content] = section.split('\n');
+                  const sectionDiv = document.createElement('div');
+                  sectionDiv.className = 'report-section';
+
+                  // Add appropriate class based on section title
+                  if (title.includes('Overall Assessment')) {
+                      sectionDiv.className += ' overall';
+                  } else if (title.includes('Key Strengths')) {
+                      sectionDiv.className += ' strengths';
+                  } else if (title.includes('Areas for Improvement')) {
+                      sectionDiv.className += ' improvements';
+                  } else if (title.includes('Recommendations')) {
+                      sectionDiv.className += ' recommendations';
+                  }
+
+                  // Create heading
+                  const heading = document.createElement('h2');
+                  heading.textContent = title.trim();
+                  sectionDiv.appendChild(heading);
+
+                  // Process content
+                  const contentText = content.join('\n').trim();
+                  const paragraphs = contentText.split('\n\n');
+
+                  paragraphs.forEach(paragraph => {
+                      if (paragraph.trim().startsWith('•')) {
+                          // This is a bullet point list
+                          const ul = document.createElement('ul');
+                          const items = paragraph.split('\n');
+                          
+                          items.forEach(item => {
+                              if (item.trim()) {
+                                  const li = document.createElement('li');
+                                  li.textContent = item.replace('•', '').trim();
+                                  ul.appendChild(li);
+                              }
+                          });
+                          
+                          sectionDiv.appendChild(ul);
+                      } else {
+                          // This is a regular paragraph
+                          const p = document.createElement('p');
+                          p.textContent = paragraph.trim();
+                          sectionDiv.appendChild(p);
+                      }
+                  });
+
+                  reportContainer.appendChild(sectionDiv);
+              });
+
+              container.innerHTML = '';
+              container.appendChild(reportContainer);
+          }
+
+          // Update the frame rendering code to use the new report renderer
+          frames.forEach(frame => {
+              // ... existing frame rendering code ...
+              
+              // When rendering the report, use the new renderer
+              if (frameAnalysis && frameAnalysis.report) {
+                  renderReport(frameAnalysis.report, `report-${safeId}`);
+              }
+              
+              // ... rest of the existing frame rendering code ...
+          });
       });
       </script>
 </body>

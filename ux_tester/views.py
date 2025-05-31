@@ -17,7 +17,7 @@ DEFAULT_FIGMA_FILE_ID = 'dl5VgCWMZwL3uRi9mIOMvX'
 
 # Figma access tokens
 FIGMA_TOKENS = {
-    'wahab_token': 'figd_iVOxEWPrSYY0MFIOD06Btza3Z2ofcJvaPENMSNSB',
+    'wahab_token': 'figd_str4YMXlfbmgslAlQnZnJIKI_DPqlQoq8wiMKl4Q',
     'ramsha_token': 'figd_3bgofXhJbrbVRuPxlaXmrH-AwL6RTdr9hW1PLydz',
     'farzam_token': 'figd_iVOxEWPrSYY0MFIOD06Btza3Z2ofcJvaPENMSNSB'
 }
@@ -34,17 +34,49 @@ Your task is to analyze ONLY the frames with the following node IDs and their di
 {user_prompt_section}
 
 For EACH of these specific frames, provide a detailed analysis. The final output must be a single, valid JSON object where each key is one of the frame's node IDs listed above.
-The value for each key should be another JSON object with four keys: "heatmap", "report", "suggestions", and "ux_score".
+The value for each key should be another JSON object with five keys: "heatmap", "report", "suggestions", "positive_points", and "ux_score".
 
-For EACH frame, identify UI components or regions where users might get confused, stuck, or abandon the task.  
-Provide these as an array called "drop_off_points". Each item should include:  
+For EACH frame, provide a comprehensive UX report that includes the following sections with HTML formatting:
+
+<h2>Overall Assessment</h2>
+<p>[2-3 sentences providing a high-level overview of the design]</p>
+
+<h2>Key Strengths</h2>
+<ul>
+<li>[First major strength]</li>
+<li>[Second major strength]</li>
+<li>[Third major strength]</li>
+</ul>
+
+<h2>Areas for Improvement</h2>
+<ul>
+<li>[First area needing improvement]</li>
+<li>[Second area needing improvement]</li>
+<li>[Third area needing improvement]</li>
+</ul>
+
+<h2>Recommendations</h2>
+<ul>
+<li>[First actionable recommendation]</li>
+<li>[Second actionable recommendation]</li>
+<li>[Third actionable recommendation]</li>
+</ul>
+
+The report should be detailed enough to provide clear insights but concise enough to be easily digestible.
+
+IMPORTANT: For EACH frame, you MUST identify at least 2-3 UI components or regions where users might get confused, stuck, or abandon the task.  
+These MUST be provided as an array called "drop_off_points". Each item should include:  
 - "x": percentage horizontal coordinate (0-100)  
 - "y": percentage vertical coordinate (0-100)  
 - "reason": a brief natural language explanation of why this spot causes drop-off.
-Include at least 1-2 drop-off points per frame if you find that something important to highlight else none can also happen.
 
+Also, for EACH frame, identify 2-3 UI components or regions that are particularly well-designed or effective.
+These MUST be provided as an array called "positive_points". Each item should include:
+- "x": percentage horizontal coordinate (0-100)
+- "y": percentage vertical coordinate (0-100)
+- "reason": a brief natural language explanation of what makes this element effective or well-designed.
 
-IMPORTANT: For coordinates in heatmap and suggestions:
+IMPORTANT: For coordinates in heatmap, suggestions, and positive_points:
 1. Use percentage-based coordinates (0-100) for both x and y values
 2. x: 0 means left edge, 100 means right edge
 3. y: 0 means top edge, 100 means bottom edge
@@ -53,35 +85,57 @@ IMPORTANT: For coordinates in heatmap and suggestions:
 6. Make sure there are at least 6 heatmap points and suggestions in a single node
 
 For the ux_score:
-- Calculate a score from 0-100 based on your analysis
-- Consider the number and severity of suggestions
-- Consider the heatmap distribution
-- Consider the overall design quality and user experience
-- Higher scores indicate better UX
+Calculate a score from 0-100 based on the following criteria:
+1. Visual Hierarchy and Layout (25 points)
+   - Clear visual hierarchy
+   - Proper spacing and alignment
+   - Balanced composition
+2. Usability and Navigation (25 points)
+   - Intuitive navigation
+   - Clear call-to-actions
+   - Logical user flow
+3. Content and Readability (25 points)
+   - Clear typography
+   - Appropriate contrast
+   - Well-organized content
+4. Interaction Design (25 points)
+   - Responsive feedback
+   - Error prevention
+   - Smooth interactions
+
+Deduct points based on:
+- Number and severity of drop-off points (-5 to -15 points each)
+- Number and severity of suggestions (-3 to -10 points each)
+- Missing critical elements (-5 to -20 points each)
+
+Add points based on:
+- Number and quality of positive points (+5 to +15 points each)
+- Innovative solutions (+5 to +10 points)
+- Accessibility considerations (+5 to +10 points)
+
+The final score should reflect the overall quality of the design while considering both strengths and weaknesses.
 
 Example of the required final JSON output structure and make sure to follow it exactly:
 {{
     "analysis_data": {{
         "3:15": {{
             "heatmap":  [{{"x": 50, "y": 50, "intensity": 0.9}}],
-            "report": "...",
-            "suggestions": [{{"x": 25, "y": 75, "suggestion": "Move button to bottom left"}}],
+            "report": "<h2>Overall Assessment</h2><p>This design demonstrates a strong focus on user experience with clear visual hierarchy and intuitive navigation. The layout effectively guides users through the content while maintaining visual balance and proper spacing.</p><h2>Key Strengths</h2><ul><li>Prominent call-to-action placement with excellent contrast</li><li>Consistent visual language throughout the interface</li><li>Well-structured content hierarchy</li></ul><h2>Areas for Improvement</h2><ul><li>Mobile responsiveness needs enhancement</li><li>Feedback mechanisms for user interactions could be improved</li><li>Error states need to be more prominent</li></ul><h2>Recommendations</h2><ul><li>Implement more responsive touch targets for mobile users</li><li>Add visual feedback for all interactive elements</li><li>Enhance error state visibility and messaging</li></ul>",
+            "suggestions": [{{"x": 25, "y": 75, "suggestion": "Move button to bottom left for better thumb reach"}}],
+            "positive_points": [{{"x": 40, "y": 60, "reason": "Clear and prominent call-to-action button with excellent contrast"}}],
             "ux_score": 85,
             "drop_off_points": [
                 {{"x":40,"y":60,"reason":"Users get stuck here because the button label is unclear."}},
-                {{"x":80,"y":20,"reason":"High abandonment due to missing feedback after click."}},
-                {{"x":10,"y":90,"reason":"Confusing navigation causes drop-off."}}
             ],
         }},
         "4:2": {{
             "heatmap":  [{{"x": 75, "y": 25, "intensity": 0.8}}],
-            "report": "...",
-            "suggestions": [{{"x": 10, "y": 90, "suggestion": "Increase contrast in bottom left"}}],
+            "report": "<h2>Overall Assessment</h2><p>The interface presents a clean and modern design with excellent use of white space and typography. The content organization is logical and the visual hierarchy effectively guides users through the information.</p><h2>Key Strengths</h2><ul><li>Consistent color scheme and visual language</li><li>Well-structured navigation elements</li><li>Excellent use of white space and typography</li></ul><h2>Areas for Improvement</h2><ul><li>Contrast issues in certain areas</li><li>Error handling could be more intuitive</li><li>Mobile touch targets need optimization</li></ul><h2>Recommendations</h2><ul><li>Enhance contrast ratios for better readability</li><li>Implement more intuitive error states</li><li>Optimize touch targets for mobile users</li></ul>",
+            "suggestions": [{{"x": 10, "y": 90, "suggestion": "Increase contrast in bottom left for better readability"}}],
+            "positive_points": [{{"x": 50, "y": 30, "reason": "Excellent use of white space and typography creates clear visual hierarchy"}}],
             "ux_score": 78,
             "drop_off_points": [
                 {{"x":40,"y":60,"reason":"Users get stuck here because the button label is unclear."}},
-                {{"x":80,"y":20,"reason":"High abandonment due to missing feedback after click."}},
-                {{"x":10,"y":90,"reason":"Confusing navigation causes drop-off."}}
             ],
         }}
     }}
@@ -114,11 +168,11 @@ def fetch_figma_file(request):
     if access_token in FIGMA_TOKENS:
         access_token = FIGMA_TOKENS[access_token]
     
-    url = "https://api.figma.com/v1/me"
+    # url = "https://api.figma.com/v1/me"
     headers = {"X-Figma-Token": access_token}
 
-    response = requests.get(url, headers=headers)
-    print("MEE::: Figma User Info:", response.json())
+    # response = requests.get(url, headers=headers)
+    # print("Logged In Figma User:", response.json())
 
     url = f"https://api.figma.com/v1/files/{file_id}"
     response = requests.get(url, headers=headers)
