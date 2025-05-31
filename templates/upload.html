@@ -1856,26 +1856,29 @@
 
           $(document).on('click', '.enhance-btn', function() {
             const frameId = $(this).data('frame');
+            // Convert the frame ID from hyphen format to colon format
+            const originalFrameId = frameId.replace(/-/g, ':');
             const figmaFileId = $('#figmaFileId').val();
             const figmaToken = getSelectedToken();
     
             console.log('Enhance button clicked for frame:', frameId);
+            console.log('Original frame ID:', originalFrameId);
             console.log('Frame analysis data:', window.frameAnalysisData);
     
-            const frameAnalysis = window.frameAnalysisData?.[frameId];
+            const frameAnalysis = window.frameAnalysisData?.[originalFrameId];
     
             if (!frameAnalysis) {
-                console.error('No analysis data found for frame:', frameId);
+                console.error('No analysis data found for frame:', originalFrameId);
                 alert('No analysis data available for this frame. Please run the analysis first.');
                 return;
             }
     
             if (frameAnalysis.drop_off_points) {
-                const url = `/ux/design_iteration/?file_id=${figmaFileId}&token=${encodeURIComponent(figmaToken)}&frame_id=${frameId}&dropoffs=${encodeURIComponent(JSON.stringify(frameAnalysis.drop_off_points))}`;
+                const url = `/ux/design_iteration/?file_id=${figmaFileId}&token=${encodeURIComponent(figmaToken)}&frame_id=${originalFrameId}&dropoffs=${encodeURIComponent(JSON.stringify(frameAnalysis.drop_off_points))}`;
                 console.log('Opening URL:', url);
                 window.open(url, '_blank');
             } else {
-                console.warn('No drop-off points found for frame:', frameId);
+                console.warn('No drop-off points found for frame:', originalFrameId);
                 alert('No drop-off points available for enhancement.');
             }
         });
