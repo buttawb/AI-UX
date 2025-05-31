@@ -1528,14 +1528,26 @@
           
           // Initialize default state - all layers and markers hidden
           $(document).ready(function() {
+              // Hide all layers
               $('.heatmap-layer').removeClass('active');
               $('.reach-layer').removeClass('active');
               $('.reach-legend').removeClass('active');
               $('.ux-suggestion-marker').removeClass('active');
               $('.ux-dropoff-marker').removeClass('active');
               $('.ux-positive-marker').removeClass('active');
+              
               // Ensure all checkboxes are unchecked by default
               $('.viz-toggle-checkbox').prop('checked', false);
+              
+              // Reset all toggle buttons to their default state
+              $('.viz-toggle-btn').removeClass('active');
+              
+              // Hide all popups
+              $('.suggestion-popup, .dropoff-popup, .positive-popup').removeClass('active');
+              
+              // Reset all containers to their default state
+              $('.design-visualization').addClass('single').removeClass('side-by-side');
+              $('.fixed-design-container').removeClass('active').css('height', '0');
           });
 
           function fetchFigmaFile() {
