@@ -74,24 +74,68 @@
         .submit-btn {
             display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
-            padding: 0.75rem 1.5rem;
+            justify-content: center;
+            gap: 0.75rem;
+            padding: 0.875rem 1.75rem;
             background: linear-gradient(135deg, var(--primary), #4f46e5);
             color: white;
             border: none;
             border-radius: var(--radius);
-            font-weight: 500;
+            font-weight: 600;
+            font-size: 1rem;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            min-width: 160px;
         }
 
         .submit-btn:hover {
             transform: translateY(-2px);
-            box-shadow: var(--shadow);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
         }
 
         .submit-btn .icon {
-            font-size: 1.2rem;
+            font-size: 1.25rem;
+            transition: transform 0.3s ease;
+        }
+
+        .submit-btn:hover .icon {
+            transform: translateX(2px);
+        }
+
+        .submit-btn.loading {
+            background: linear-gradient(135deg, #4f46e5, #4f46e5);
+            cursor: wait;
+        }
+
+        .submit-btn.loading::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: button-spin 0.8s linear infinite;
+        }
+
+        @keyframes button-spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .submit-btn.loading span {
+            visibility: hidden;
         }
 
         .loader {
