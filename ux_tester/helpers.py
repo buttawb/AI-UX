@@ -3,13 +3,72 @@ import os
 import requests
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
-from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.conf import settings
+import base64
+from PIL import Image, ImageDraw
+import io
+import datetime
 
-from ux_tester.views import FIGMA_ACCESS_TOKEN, OPENAI_API_KEY_SULTAN
+from ux_tester.views import FIGMA_ACCESS_TOKEN, OPENAI_API_KEY_SULTAN, AVIALDO_GEMINI_KEY
 
+# Simulation prompt template
+SIMULATION_PROMPT = '''
+You are a UX expert. Given the frames, interactions, and actual images from Figma:
 
+Frames:
+{frames}
+
+Interactions:
+{interactions}
+
+Task: {task_description}
+
+For each step in the simulation, describe the visual changes needed to show the interaction:
+1. Cursor position and movement
+2. Click effects
+3. Text input animations
+4. Transition effects
+
+Generate a JSON video simulation script in this format:
+
+{{
+  "steps": [
+    {{
+      "frame_id": "ID of the frame",
+      "action": "description of the action",
+      "duration": seconds,
+      "overlay_text": "text to show during this step",
+      "changes": [
+        {{
+          "type": "cursor|click|highlight|text",
+          "position": {{
+            "x": number,
+            "y": number,
+            "width": number (optional),
+            "height": number (optional)
+          }},
+          "text": "text to show" (for text type)
+        }}
+      ],
+      "interaction": {{
+        "element_id": "ID of the element being interacted with",
+        "element_name": "Name of the element",
+        "element_type": "Type of the element",
+        "interaction_type": "Type of interaction from Figma",
+        "position": {{
+          "x": number,
+          "y": number,
+          "width": number,
+          "height": number
+        }}
+      }}
+    }}
+  ]
+}}
+
+Make it a 10-20 seconds video simulation. For each step, describe the visual changes needed to show the interaction.
+'''
 
 def fetch_figma_json(file_id):
     url = f'https://api.figma.com/v1/files/{file_id}'
@@ -20,95 +79,222 @@ def fetch_figma_json(file_id):
 
 def extract_frames_and_prototypes(figma_json):
     frames = []
-    transitions = []
+    interactions = []
+    
+    def extract_node_interactions(node, parent_frame=None):
+        node_id = node.get('id')
+        node_name = node.get('name')
+        node_type = node.get('type')
+        
+        # Extract interactions from prototype data
+        proto = node.get('prototype') or {}
+        if proto:
+            dest_id = proto.get('destinationId') or node.get('prototypeNodeID')
+            if dest_id:
+                interactions.append({
+                    'element_id': node_id,
+                    'element_name': node_name,
+                    'element_type': node_type,
+                    'frame_id': parent_frame,
+                    'interaction_type': proto.get('transitionType', 'instant'),
+                    'destination_id': dest_id,
+                    'action': proto.get('action', 'tap/click'),
+                    'animation': proto.get('animation', {}),
+                    'position': {
+                        'x': node.get('absoluteBoundingBox', {}).get('x', 0),
+                        'y': node.get('absoluteBoundingBox', {}).get('y', 0),
+                        'width': node.get('absoluteBoundingBox', {}).get('width', 0),
+                        'height': node.get('absoluteBoundingBox', {}).get('height', 0)
+                    }
+                })
+        
+        # Extract reactions
+        if 'reactions' in node:
+            for reaction in node['reactions']:
+                dest = reaction.get('action', {}).get('destinationId')
+                if dest:
+                    interactions.append({
+                        'element_id': node_id,
+                        'element_name': node_name,
+                        'element_type': node_type,
+                        'frame_id': parent_frame,
+                        'interaction_type': reaction.get('transitionType', 'instant'),
+                        'destination_id': dest,
+                        'action': reaction.get('trigger', 'tap/click'),
+                        'animation': reaction.get('animation', {}),
+                        'position': {
+                            'x': node.get('absoluteBoundingBox', {}).get('x', 0),
+                            'y': node.get('absoluteBoundingBox', {}).get('y', 0),
+                            'width': node.get('absoluteBoundingBox', {}).get('width', 0),
+                            'height': node.get('absoluteBoundingBox', {}).get('height', 0)
+                        }
+                    })
+        
+        # Recursively process children
+        for child in node.get('children', []):
+            extract_node_interactions(child, node_id if node_type == 'FRAME' else parent_frame)
+    
+    # Process all canvases and their children
     canvases = figma_json.get('document', {}).get('children', [])
     for canvas in canvases:
         for node in canvas.get('children', []):
             if node.get('type') == 'FRAME':
                 frame_id = node.get('id')
                 frame_name = node.get('name')
-                frames.append({'id': frame_id, 'name': frame_name})
-                proto = node.get('prototype') or {}
-                dest_id = proto.get('destinationId') or node.get('prototypeNodeID')
-                if dest_id:
-                    transitions.append({
-                        'from': frame_id,
-                        'to': dest_id,
-                        'action': 'tap/click to navigate'
-                    })
-                if 'reactions' in node:
-                    for reaction in node['reactions']:
-                        dest = reaction.get('action', {}).get('destinationId')
-                        if dest:
-                            transitions.append({
-                                'from': frame_id,
-                                'to': dest,
-                                'action': reaction.get('trigger', 'tap/click')
-                            })
-    return frames, transitions
+                frames.append({
+                    'id': frame_id,
+                    'name': frame_name,
+                    'position': {
+                        'x': node.get('absoluteBoundingBox', {}).get('x', 0),
+                        'y': node.get('absoluteBoundingBox', {}).get('y', 0),
+                        'width': node.get('absoluteBoundingBox', {}).get('width', 0),
+                        'height': node.get('absoluteBoundingBox', {}).get('height', 0)
+                    }
+                })
+                extract_node_interactions(node, frame_id)
+    
+    return frames, interactions
 
 def fetch_images_for_frames(file_id, frame_ids):
     url = f'https://api.figma.com/v1/images/{file_id}?ids={",".join(frame_ids)}&format=png&scale=2'
     headers = {'X-Figma-Token': FIGMA_ACCESS_TOKEN}
     r = requests.get(url, headers=headers)
     r.raise_for_status()
-    return r.json().get('images', {})
+    images = r.json().get('images', {})
+    
+    # Download all images
+    downloaded_images = {}
+    for frame_id, image_url in images.items():
+        img_response = requests.get(image_url)
+        img_response.raise_for_status()
+        # Ensure proper base64 padding
+        image_data = base64.b64encode(img_response.content).decode('utf-8')
+        # Add padding if needed
+        padding = len(image_data) % 4
+        if padding:
+            image_data += '=' * (4 - padding)
+        downloaded_images[frame_id] = {
+            'url': image_url,
+            'data': image_data
+        }
+    
+    return downloaded_images
 
-def call_openai_to_generate_script(task_description, frames, transitions, frame_images):
-    prompt = f"""
-You are a UX expert. Given the frames and navigation:
+def manipulate_image(image_data, changes):
+    """Apply visual changes to an image based on the model's instructions."""
+    try:
+        # Ensure proper base64 padding
+        padding = len(image_data) % 4
+        if padding:
+            image_data += '=' * (4 - padding)
+            
+        # Decode base64 image
+        image_bytes = base64.b64decode(image_data)
+        img = Image.open(io.BytesIO(image_bytes))
+        draw = ImageDraw.Draw(img)
+        
+        # Apply changes based on the model's instructions
+        for change in changes:
+            if change['type'] == 'cursor':
+                # Draw cursor
+                x, y = change['position']['x'], change['position']['y']
+                draw.polygon([(x, y), (x+15, y+25), (x+5, y+20)], fill='white')
+                
+            elif change['type'] == 'click':
+                # Draw click effect
+                x, y = change['position']['x'], change['position']['y']
+                draw.ellipse([x-10, y-10, x+10, y+10], outline='white', width=2)
+                
+            elif change['type'] == 'highlight':
+                # Draw highlight
+                x, y = change['position']['x'], change['position']['y']
+                w, h = change['position']['width'], change['position']['height']
+                draw.rectangle([x, y, x+w, y+h], outline='white', width=2)
+                
+            elif change['type'] == 'text':
+                # Draw text input
+                x, y = change['position']['x'], change['position']['y']
+                draw.rectangle([x, y, x+200, y+30], outline='white', width=1)
+                draw.text((x+10, y+5), change['text'], fill='white')
+        
+        # Convert back to base64
+        buffered = io.BytesIO()
+        img.save(buffered, format="PNG")
+        return base64.b64encode(buffered.getvalue()).decode('utf-8')
+    except Exception as e:
+        print(f"Error in manipulate_image: {str(e)}")
+        raise ValueError(f"Failed to manipulate image: {str(e)}")
 
-Frames:
-{json.dumps(frames, indent=2)}
+def call_openai_to_generate_script(task_description, frames, interactions, frame_images):
+    # Prepare the images for OpenAI
+    image_descriptions = []
+    for frame_id, image_data in frame_images.items():
+        image_descriptions.append({
+            'frame_id': frame_id,
+            'image_data': image_data['data'],
+            'interactions': [i for i in interactions if i['frame_id'] == frame_id]
+        })
 
-Transitions:
-{json.dumps(transitions, indent=2)}
+    # Format the prompt with actual data
+    prompt = SIMULATION_PROMPT.format(
+        frames=json.dumps(frames, indent=2),
+        interactions=json.dumps(interactions, indent=2),
+        task_description=task_description
+    )
 
-Frame images URLs:
-{json.dumps(frame_images, indent=2)}
-
-Task: {task_description}
-
-Generate a JSON video simulation script in the format:
-
-{{
-  "steps": [
-    {{
-      "frame_url": "URL from frame_images object",
-      "action": "description of the action",
-      "duration": seconds,
-      "overlay_text": "text to show during this step"
-    }},
-    ...
-  ]
-}}
-
-Make it a 10-20 seconds video simulation.
-"""
     try:
         print("Sending request to OpenAI...")
-        print("Prompt:", prompt)  # Debug log
         headers = {
             'Authorization': f'Bearer {OPENAI_API_KEY_SULTAN}',
             'Content-Type': 'application/json'
         }
+        
+        # Prepare messages with images
+        messages = [
+            {
+                "role": "system",
+                "content": "You are a UX/UI expert. You will receive Figma frames and their interactions. For each frame, describe the visual changes needed to show the interaction happening (cursor movements, clicks, text input, etc.)."
+            },
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": prompt
+                    }
+                ]
+            }
+        ]
+        
+        # Add each image as a separate message
+        for img_desc in image_descriptions:
+            messages[1]["content"].append({
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:image/png;base64,{img_desc['image_data']}",
+                    "detail": "high"
+                }
+            })
+            messages[1]["content"].append({
+                "type": "text",
+                "text": f"Frame {img_desc['frame_id']} with interactions: {json.dumps(img_desc['interactions'])}"
+            })
+
         data = {
-            "model": "gpt-4",
-            "messages": [
-                {"role": "system", "content": "You are a UX/UI expert and video script generator."},
-                {"role": "user", "content": prompt}
-            ],
-            "max_tokens": 1000,
+            "model": "gpt-4.1",
+            "messages": messages,
+            "max_tokens": 4000,
             "temperature": 0.7,
         }
         
         print("OpenAI request data:", json.dumps(data, indent=2))
         
         response = requests.post('https://api.openai.com/v1/chat/completions', headers=headers, json=data)
-        response.raise_for_status()
-        
         print("OpenAI response status:", response.status_code)
-        print("OpenAI response:", response.text)
+        print("OpenAI response headers:", dict(response.headers))
+        print("OpenAI response text:", response.text)
+        
+        response.raise_for_status()
         
         response_json = response.json()
         if not response_json.get('choices'):
@@ -119,16 +305,31 @@ Make it a 10-20 seconds video simulation.
         
         # Try to parse the content as JSON
         try:
-            # First, try to find JSON in the content (in case there's additional text)
             json_start = content.find('{')
             json_end = content.rfind('}') + 1
             if json_start >= 0 and json_end > json_start:
                 json_str = content[json_start:json_end]
-                print("Extracted JSON string:", json_str)  # Debug log
+                print("Extracted JSON string:", json_str)
                 parsed_json = json.loads(json_str)
-                print("Parsed JSON:", json.dumps(parsed_json, indent=2))  # Debug log
-                return json_str
+                print("Parsed JSON:", json.dumps(parsed_json, indent=2))
+                
+                # Apply the changes to each frame
+                for step in parsed_json['steps']:
+                    frame_id = step['frame_id']
+                    if frame_id in frame_images:
+                        try:
+                            manipulated_image = manipulate_image(
+                                frame_images[frame_id]['data'],
+                                step['changes']
+                            )
+                            step['manipulated_image'] = f"data:image/png;base64,{manipulated_image}"
+                        except Exception as e:
+                            print(f"Error manipulating image for step {step['action']}: {str(e)}")
+                            raise
+                
+                return json.dumps(parsed_json)
             else:
+                print("Content that failed to parse:", content)
                 raise ValueError("No JSON object found in response")
         except json.JSONDecodeError as e:
             print("JSON parsing error:", str(e))
@@ -142,6 +343,140 @@ Make it a 10-20 seconds video simulation.
         print("Unexpected error in call_openai_to_generate_script:", str(e))
         raise ValueError(f"Error generating simulation script: {str(e)}")
 
+def call_gemini_to_generate_script(task_description, frames, interactions, frame_images):
+    """Generate simulation script using Gemini API."""
+    try:
+        model_name = "gemini-pro-vision"
+        gemini_api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={AVIALDO_GEMINI_KEY}"
+        
+        # Format the prompt with actual data
+        prompt = SIMULATION_PROMPT.format(
+            frames=json.dumps(frames, indent=2),
+            interactions=json.dumps(interactions, indent=2),
+            task_description=task_description
+        )
+        
+        # Prepare content for Gemini
+        contents = []
+        
+        # Add text prompt
+        contents.append({
+            "role": "user",
+            "parts": [{"text": prompt}]
+        })
+        
+        # Add images and their interactions
+        for frame_id, image_data in frame_images.items():
+            # Add image
+            contents.append({
+                "role": "user",
+                "parts": [{
+                    "inline_data": {
+                        "mime_type": "image/png",
+                        "data": image_data['data']
+                    }
+                }]
+            })
+            
+            # Add frame interactions as text
+            frame_interactions = [i for i in interactions if i['frame_id'] == frame_id]
+            contents.append({
+                "role": "user",
+                "parts": [{
+                    "text": f"Frame {frame_id} with interactions: {json.dumps(frame_interactions)}"
+                }]
+            })
+        
+        # Prepare request data
+        data = {
+            "contents": contents,
+            "generationConfig": {
+                "temperature": 0.7,
+                "topK": 32,
+                "topP": 1,
+                "maxOutputTokens": 4000,
+            }
+        }
+        
+        print("Sending request to Gemini...")
+        print("Request data:", json.dumps(data, indent=2))
+        
+        response = requests.post(gemini_api_url, json=data)
+        print("Gemini response status:", response.status_code)
+        print("Gemini response headers:", dict(response.headers))
+        print("Gemini response text:", response.text)
+        
+        response.raise_for_status()
+        response_json = response.json()
+        
+        if not response_json.get('candidates'):
+            raise ValueError("No candidates in Gemini response")
+            
+        content = response_json['candidates'][0]['content']['parts'][0]['text']
+        print("Gemini response content:", content)
+        
+        # Parse the response
+        try:
+            json_start = content.find('{')
+            json_end = content.rfind('}') + 1
+            if json_start >= 0 and json_end > json_start:
+                json_str = content[json_start:json_end]
+                print("Extracted JSON string:", json_str)
+                parsed_json = json.loads(json_str)
+                print("Parsed JSON:", json.dumps(parsed_json, indent=2))
+                
+                # Apply the changes to each frame
+                for step in parsed_json['steps']:
+                    frame_id = step['frame_id']
+                    if frame_id in frame_images:
+                        try:
+                            manipulated_image = manipulate_image(
+                                frame_images[frame_id]['data'],
+                                step['changes']
+                            )
+                            step['manipulated_image'] = f"data:image/png;base64,{manipulated_image}"
+                        except Exception as e:
+                            print(f"Error manipulating image for step {step['action']}: {str(e)}")
+                            raise
+                
+                return json.dumps(parsed_json)
+            else:
+                print("Content that failed to parse:", content)
+                raise ValueError("No JSON object found in response")
+        except json.JSONDecodeError as e:
+            print("JSON parsing error:", str(e))
+            print("Content that failed to parse:", content)
+            raise ValueError(f"Invalid JSON in Gemini response: {str(e)}")
+            
+    except requests.exceptions.RequestException as e:
+        print("Gemini API request failed:", str(e))
+        raise ValueError(f"Gemini API request failed: {str(e)}")
+    except Exception as e:
+        print(f"Error in call_gemini_to_generate_script: {str(e)}")
+        raise ValueError(f"Error generating simulation script with Gemini: {str(e)}")
+
+def generate_simulation_script(task_description, frames, interactions, frame_images, use_gemini=False):
+    """Generate simulation script using either OpenAI or Gemini."""
+    try:
+        if use_gemini and AVIALDO_GEMINI_KEY:
+            print("Using Gemini for simulation generation...")
+            return call_gemini_to_generate_script(task_description, frames, interactions, frame_images)
+        else:
+            print("Using OpenAI for simulation generation...")
+            return call_openai_to_generate_script(task_description, frames, interactions, frame_images)
+    except Exception as e:
+        print(f"Error in generate_simulation_script: {str(e)}")
+        # If the first attempt fails, try the other model
+        try:
+            if use_gemini:
+                print("Falling back to OpenAI...")
+                return call_openai_to_generate_script(task_description, frames, interactions, frame_images)
+            else:
+                print("Falling back to Gemini...")
+                return call_gemini_to_generate_script(task_description, frames, interactions, frame_images)
+        except Exception as fallback_error:
+            print(f"Fallback also failed: {str(fallback_error)}")
+            raise ValueError(f"Both OpenAI and Gemini failed to generate simulation: {str(e)}")
 
 @csrf_exempt
 def generate_simulation(request):
@@ -151,6 +486,7 @@ def generate_simulation(request):
         data = json.loads(request.body)
         design_data = data.get('design_data')
         task_description = data.get('task_description')
+        use_gemini = data.get('use_gemini', False)
 
         if not design_data or not task_description:
             return JsonResponse({'error': 'Missing design_data or task_description.'}, status=400)
@@ -162,7 +498,7 @@ def generate_simulation(request):
         print(f"Processing Figma file ID: {figma_file_id}")
         
         figma_json = fetch_figma_json(figma_file_id)
-        frames, transitions = extract_frames_and_prototypes(figma_json)
+        frames, interactions = extract_frames_and_prototypes(figma_json)
 
         if not frames:
             return JsonResponse({'error': 'No frames found in Figma file.'}, status=400)
@@ -170,11 +506,17 @@ def generate_simulation(request):
         frame_ids = [f['id'] for f in frames]
         frame_images = fetch_images_for_frames(figma_file_id, frame_ids)
         
-        print(f"Found {len(frames)} frames and {len(transitions)} transitions")
+        print(f"Found {len(frames)} frames and {len(interactions)} interactions")
         print("Frame images:", frame_images)
 
-        # Call OpenAI to generate script
-        simulation_script_str = call_openai_to_generate_script(task_description, frames, transitions, frame_images)
+        # Call the appropriate model to generate script
+        simulation_script_str = generate_simulation_script(
+            task_description, 
+            frames, 
+            interactions, 
+            frame_images,
+            use_gemini=use_gemini
+        )
         print("Received simulation script:", simulation_script_str)
         
         try:
@@ -188,38 +530,49 @@ def generate_simulation(request):
         static_dir = os.path.join(settings.STATIC_ROOT, 'assets', 'simulations', 'images')
         os.makedirs(static_dir, exist_ok=True)
 
-        # Download and store images locally
+        # Save manipulated images
         for i, step in enumerate(simulation_script['steps'], 1):
             try:
-                print(f"Processing step {i}:", step)  # Debug log
-                frame_url = step.get('frame_url')
-                if not frame_url:
-                    print(f"Warning: No frame_url in step {i}, skipping")
-                    continue
-
-                # Generate filename using Figma file ID and frame ID
-                image_filename = f'{figma_file_id}_{frame_url.split("/")[-1]}.png'
-                image_path = os.path.join('assets', 'simulations', 'images', image_filename)
+                print(f"Processing step {i}:", step)
                 
-                # Download the image
-                print(f"Downloading image from: {frame_url}")  # Debug log
-                response = requests.get(frame_url)
-                response.raise_for_status()
+                # Validate manipulated_image
+                image_data = step['manipulated_image']
+                if not isinstance(image_data, str) or not image_data.startswith('data:image/png;base64,'):
+                    raise ValueError(f"Invalid image data format in step {i}. Expected base64-encoded PNG image.")
+                
+                # Remove data URL prefix
+                image_data = image_data.replace('data:image/png;base64,', '')
+                
+                # Add padding if needed
+                padding = len(image_data) % 4
+                if padding:
+                    image_data += '=' * (4 - padding)
+                
+                try:
+                    image_bytes = base64.b64decode(image_data)
+                except Exception as e:
+                    print(f"Base64 decode error for step {i}:", str(e))
+                    print("Image data length:", len(image_data))
+                    print("Image data preview:", image_data[:100])
+                    raise ValueError(f"Invalid base64 data in step {i}: {str(e)}")
+                
+                image_filename = f'{figma_file_id}_step_{i}.png'
+                image_path = os.path.join('assets', 'simulations', 'images', image_filename)
                 
                 # Save the image to STATIC_ROOT
                 full_path = os.path.join(settings.STATIC_ROOT, image_path)
                 with open(full_path, 'wb') as f:
-                    f.write(response.content)
+                    f.write(image_bytes)
                 
                 # Update the frame_url to point to our static storage
                 step['frame_url'] = f"assets/simulations/images/{image_filename}"
-                print(f"Saved image to: {full_path}")
+                print(f"Saved manipulated image to: {full_path}")
                 print(f"Image URL: {step['frame_url']}")
             except Exception as e:
                 print(f"Error processing step {i}:", str(e))
                 raise
 
-        # Return the simulation data directly
+        # Return the simulation data
         return JsonResponse({
             'simulation_data': simulation_script
         })

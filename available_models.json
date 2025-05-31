@@ -1,0 +1,10 @@
+{
+  "models": [
+    "gpt-4o",
+    "gpt-4o-mini",
+    "gpt-4.1",
+    "gpt-4.1-mini",
+    "gpt-4.1-nano"
+  ],
+  "last_updated": "2025-05-31 10:40:28.982431"
+}
