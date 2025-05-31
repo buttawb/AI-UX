@@ -73,9 +73,9 @@ def generate_with_gemini(image, dropoff_points):
         image = image.convert('RGBA')
     
     # Save a high-quality version of the original for reference
-    reference_path = "static/generated_images/reference_design.png"
-    os.makedirs(os.path.dirname(reference_path), exist_ok=True)
-    image.save(reference_path, 'PNG', quality=100, optimize=False)
+    # reference_path = "static/generated_images/reference_design.png"
+    # os.makedirs(os.path.dirname(reference_path), exist_ok=True)
+    # image.save(reference_path, 'PNG', quality=100, optimize=False)
     
     response = client.models.generate_content(
         model="gemini-2.0-flash-preview-image-generation",
@@ -167,7 +167,7 @@ def generate_iteration(request):
             selected_frame = frames[0]
             
             # Fetch frame image with maximum quality (scale=4 for highest resolution)
-            image_url = f"https://api.figma.com/v1/images/{file_id}?ids={selected_frame['id']}&format=png&scale=4"
+            image_url = f"https://api.figma.com/v1/images/{file_id}?ids={selected_frame['id']}&format=png&scale=2"
             image_response = requests.get(image_url, headers=headers)
             
             if image_response.status_code != 200:
