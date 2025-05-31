@@ -646,24 +646,24 @@
             font-weight: 500;
             cursor: pointer;
             transition: all 0.3s ease;
-            z-index: 20;
+            z-index: 30;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-decoration: none;
+            margin-left: 1rem;
         }
 
-        .variation-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        .ux-score-container {
+            position: relative;
+            z-index: 20;
         }
 
-        .variation-button .icon {
-            font-size: 1.2rem;
-        }
-
-        .variation-button .badge {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 0.25rem 0.5rem;
-            border-radius: 12px;
-            font-size: 0.8rem;
+        .frame-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            position: relative;
+            padding-right: 200px; /* Make space for the variation button */
         }
     </style>
 </head>
@@ -1024,6 +1024,14 @@
                                       <span class="ux-score-value">${uxScore}</span>
                                       <span>UX Score</span>
                                   </div>
+                                  ${uxScore < 80 ? `
+                                  <a href="/ux/design_iteration/?file_id=${figmaFileId}&token=${encodeURIComponent(figmaToken)}&frame_id=${frame.id}&dropoffs=${encodeURIComponent(JSON.stringify(frameAnalysis.drop_off_points))}" 
+                                     class="variation-button" target="_blank">
+                                      <span class="icon">✨</span>
+                                      <span>Enhance with AI</span>
+                                      <span class="badge">New!</span>
+                                  </a>
+                                  ` : ''}
                               </div>
                               <div class="analysis-content">
                                   <div class="design-column">

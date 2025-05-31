@@ -13,30 +13,60 @@ import os
 import base64
 
 # Design iteration prompt template for Gemini
-GEMINI_DESIGN_ITERATION_PROMPT = """This is my figma screen, fix the below issues on this screen - Add two more messages in this chat.
+GEMINI_DESIGN_ITERATION_PROMPT = """You are a UX/UI design expert. Analyze the provided Figma screen and address the following UX issues:
 
-CRITICAL INSTRUCTIONS FOR TEXT HANDLING:
-1. DO NOT modify or regenerate any existing text
-2. Keep all existing text exactly as is, with the same font, size, and position
-3. Only add new text for the two messages
-4. New text must match the exact font style, size, and quality of existing text
-5. Do not blur, distort, or modify any text elements
-6. Maintain exact pixel-perfect alignment of all text"""
+{dropoff_points}
+
+CRITICAL INSTRUCTIONS:
+1. Focus on fixing the specific UX issues mentioned above
+2. Maintain the overall design language and style
+3. Keep all existing text exactly as is, with the same font, size, and position
+4. Only modify elements that need improvement based on the UX issues
+5. Ensure all changes improve usability while maintaining visual consistency
+6. Do not add new text unless absolutely necessary to fix a UX issue
+7. Maintain exact pixel-perfect alignment of all elements
+
+Please provide an enhanced version of the design that addresses these UX issues while maintaining the original design's integrity."""
 
 
 def design_iteration_view(request):
     """
     View function for the design iteration page.
     """
-    return render(request, 'design_iteration.html')
+    # Get parameters from URL
+    file_id = request.GET.get('file_id')
+    token = request.GET.get('token')
+    frame_id = request.GET.get('frame_id')
+    dropoffs = request.GET.get('dropoffs')
+    
+    # Parse dropoffs if present
+    dropoff_points = []
+    if dropoffs:
+        try:
+            dropoff_points = json.loads(dropoffs)
+        except:
+            dropoff_points = []
+    
+    # Create context with pre-filled values
+    context = {
+        'file_id': file_id,
+        'token': token,
+        'frame_id': frame_id,
+        'dropoff_points': dropoff_points
+    }
+    
+    return render(request, 'design_iteration.html', context)
 
-def generate_with_gemini(image, prompt):
+def generate_with_gemini(image, dropoff_points):
     """Generate design iteration using Gemini API"""
     # Initialize the Gemini client
     client = genai.Client(api_key=AVIALDO_GEMINI_KEY)
     
-    # Create a more explicit prompt for image generation
-    text_input = GEMINI_DESIGN_ITERATION_PROMPT.format(user_prompt=prompt)
+    # Format dropoff points for the prompt
+    dropoff_text = "\n".join([f"- {point.get('reason', '')}" for point in dropoff_points])
+    
+    # Create the prompt with dropoff points
+    text_input = GEMINI_DESIGN_ITERATION_PROMPT.format(dropoff_points=dropoff_text)
     
     # Ensure image is in highest quality and preserve text
     if image.mode != 'RGBA':
@@ -95,7 +125,7 @@ def generate_iteration(request):
             data = json.loads(request.body)
             figma_token = data.get('figma_token')
             design_data = data.get('design_data')
-            iteration_prompt = data.get('iteration_prompt', '')
+            dropoff_points = data.get('dropoff_points', [])
 
             if not figma_token:
                 return JsonResponse({"error": "No access token provided"}, status=400)
@@ -161,7 +191,7 @@ def generate_iteration(request):
                 original_image.save(original_path, 'PNG', quality=100, optimize=False)
 
                 # Generate iteration using Gemini
-                response = generate_with_gemini(original_image, iteration_prompt)
+                response = generate_with_gemini(original_image, dropoff_points)
                 
                 if response:
                     # Parse the text response as JSON
