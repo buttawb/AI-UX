@@ -1,5 +1,6 @@
 import json
 import os
+from django.shortcuts import render
 import requests
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
@@ -10,7 +11,7 @@ from PIL import Image, ImageDraw
 import io
 import datetime
 
-from ux_tester.views import FIGMA_ACCESS_TOKEN, OPENAI_API_KEY_SULTAN, AVIALDO_GEMINI_KEY
+from ux_tester.views import DEFAULT_FIGMA_FILE_ID, FIGMA_TOKENS, OPENAI_API_KEY_SULTAN, AVIALDO_GEMINI_KEY
 
 # Simulation prompt template
 SIMULATION_PROMPT = '''
@@ -70,9 +71,18 @@ Generate a JSON video simulation script in this format:
 Make it a 10-20 seconds video simulation. For each step, describe the visual changes needed to show the interaction.
 '''
 
-def fetch_figma_json(file_id):
+@csrf_exempt
+def simulation(request):
+    """
+    Render the simulation page.
+    """
+    context = {'figma_file_id': DEFAULT_FIGMA_FILE_ID}
+    return render(request, 'simulation.html', context)
+
+
+def fetch_figma_json(file_id, access_token):
     url = f'https://api.figma.com/v1/files/{file_id}'
-    headers = {'X-Figma-Token': FIGMA_ACCESS_TOKEN}
+    headers = {'X-Figma-Token': access_token}
     r = requests.get(url, headers=headers)
     r.raise_for_status()
     return r.json()
@@ -155,9 +165,9 @@ def extract_frames_and_prototypes(figma_json):
     
     return frames, interactions
 
-def fetch_images_for_frames(file_id, frame_ids):
+def fetch_images_for_frames(file_id, frame_ids, access_token):
     url = f'https://api.figma.com/v1/images/{file_id}?ids={",".join(frame_ids)}&format=png&scale=2'
-    headers = {'X-Figma-Token': FIGMA_ACCESS_TOKEN}
+    headers = {'X-Figma-Token': access_token}
     r = requests.get(url, headers=headers)
     r.raise_for_status()
     images = r.json().get('images', {})
@@ -486,10 +496,18 @@ def generate_simulation(request):
         data = json.loads(request.body)
         design_data = data.get('design_data')
         task_description = data.get('task_description')
+        access_token = data.get('access_token')
         use_gemini = data.get('use_gemini', False)
 
         if not design_data or not task_description:
             return JsonResponse({'error': 'Missing design_data or task_description.'}, status=400)
+
+        if not access_token:
+            return JsonResponse({'error': 'No access token provided'}, status=400)
+
+        # Get the actual token value if it's a predefined token
+        if access_token in FIGMA_TOKENS:
+            access_token = FIGMA_TOKENS[access_token]
 
         if design_data['type'] != 'figma':
             return JsonResponse({'error': 'Only figma type supported in this example.'}, status=400)
@@ -497,14 +515,14 @@ def generate_simulation(request):
         figma_file_id = design_data.get('id')
         print(f"Processing Figma file ID: {figma_file_id}")
         
-        figma_json = fetch_figma_json(figma_file_id)
+        figma_json = fetch_figma_json(figma_file_id, access_token)
         frames, interactions = extract_frames_and_prototypes(figma_json)
 
         if not frames:
             return JsonResponse({'error': 'No frames found in Figma file.'}, status=400)
 
         frame_ids = [f['id'] for f in frames]
-        frame_images = fetch_images_for_frames(figma_file_id, frame_ids)
+        frame_images = fetch_images_for_frames(figma_file_id, frame_ids, access_token)
         
         print(f"Found {len(frames)} frames and {len(interactions)} interactions")
         print("Frame images:", frame_images)
@@ -526,9 +544,13 @@ def generate_simulation(request):
             print("Script content:", simulation_script_str)
             raise ValueError(f"Invalid simulation script format: {str(e)}")
 
+        # Commenting out image saving code since we're using base64 data directly
+        """
         # Create static directory if it doesn't exist
-        static_dir = os.path.join(settings.STATIC_ROOT, 'assets', 'simulations', 'images')
+        static_dir = os.path.join(settings.BASE_DIR, 'static', 'assets', 'simulations', 'images')
+        staticfiles_dir = os.path.join(settings.BASE_DIR, 'staticfiles', 'assets', 'simulations', 'images')
         os.makedirs(static_dir, exist_ok=True)
+        os.makedirs(staticfiles_dir, exist_ok=True)
 
         # Save manipulated images
         for i, step in enumerate(simulation_script['steps'], 1):
@@ -559,18 +581,24 @@ def generate_simulation(request):
                 image_filename = f'{figma_file_id}_step_{i}.png'
                 image_path = os.path.join('assets', 'simulations', 'images', image_filename)
                 
-                # Save the image to STATIC_ROOT
-                full_path = os.path.join(settings.STATIC_ROOT, image_path)
-                with open(full_path, 'wb') as f:
+                # Save to static directory
+                static_path = os.path.join(static_dir, image_filename)
+                with open(static_path, 'wb') as f:
+                    f.write(image_bytes)
+                
+                # Save to staticfiles directory
+                staticfiles_path = os.path.join(staticfiles_dir, image_filename)
+                with open(staticfiles_path, 'wb') as f:
                     f.write(image_bytes)
                 
                 # Update the frame_url to point to our static storage
                 step['frame_url'] = f"assets/simulations/images/{image_filename}"
-                print(f"Saved manipulated image to: {full_path}")
+                print(f"Saved manipulated image to: {static_path}")
                 print(f"Image URL: {step['frame_url']}")
             except Exception as e:
                 print(f"Error processing step {i}:", str(e))
                 raise
+        """
 
         # Return the simulation data
         return JsonResponse({
@@ -580,3 +608,27 @@ def generate_simulation(request):
     except Exception as e:
         print(f"Error in generate_simulation: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
+
+# Commenting out the save_manipulated_image function since it's no longer used
+"""
+def save_manipulated_image(image_data, filename):
+    # Create directories if they don't exist
+    static_dir = os.path.join(settings.BASE_DIR, 'static', 'assets', 'simulations', 'images')
+    staticfiles_dir = os.path.join(settings.BASE_DIR, 'staticfiles', 'assets', 'simulations', 'images')
+    
+    os.makedirs(static_dir, exist_ok=True)
+    os.makedirs(staticfiles_dir, exist_ok=True)
+    
+    # Save to static directory
+    static_path = os.path.join(static_dir, filename)
+    with open(static_path, 'wb') as f:
+        f.write(image_data)
+    
+    # Save to staticfiles directory
+    staticfiles_path = os.path.join(staticfiles_dir, filename)
+    with open(staticfiles_path, 'wb') as f:
+        f.write(image_data)
+    
+    # Return the relative path for the URL
+    return os.path.join('assets', 'simulations', 'images', filename)
+"""

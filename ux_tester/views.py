@@ -14,12 +14,17 @@ import base64
 
 # Default Figma file ID (will be overridden by user input)
 DEFAULT_FIGMA_FILE_ID = 'dl5VgCWMZwL3uRi9mIOMvX'
-FIGMA_ACCESS_TOKEN = 'figd_iVOxEWPrSYY0MFIOD06Btza3Z2ofcJvaPENMSNSB'
-RAMSHA_FIGMA_ACCESS_TOKEN = 'figd_3bgofXhJbrbVRuPxlaXmrH-AwL6RTdr9hW1PLydz'
+
+# Figma access tokens
+FIGMA_TOKENS = {
+    'wahab_token': 'figd_iVOxEWPrSYY0MFIOD06Btza3Z2ofcJvaPENMSNSB',
+    'ramsha_token': 'figd_3bgofXhJbrbVRuPxlaXmrH-AwL6RTdr9hW1PLydz',
+    'farzam_token': 'figd_iVOxEWPrSYY0MFIOD06Btza3Z2ofcJvaPENMSNSB'
+}
+
 OPENAI_API_KEY = "sk-proj-TqTaxIMCk6fsrNcaGXE1yF-PehXerkG-e4EJaqGft33i13RlRJq_xRmiV_lGQUHdpQO3 5kxXhaT3BlbkFJ1xfcvTfnnPxsuNGzvhLdYBU25sc-VgK4QA7IhR0KdBWkqiijTRGjbsp1-zqKJnObr6lkftWyUA"
 OPENAI_API_KEY_SULTAN="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"
 TEMP_TOKEN = "328267-66c5803b-80d4-4989-ad6f-8430d60fb714"
-FARZAM_FIGMA_ACCESS_TOKEN = "figd_iVOxEWPrSYY0MFIOD06Btza3Z2ofcJvaPENMSNSB"
 
 # Base prompt template that will be used for both OpenAI and Gemini
 BASE_PROMPT_TEMPLATE = """
@@ -100,9 +105,17 @@ def fetch_figma_file(request):
     Fetch the Figma file data using the Figma API.
     """
     file_id = request.GET.get('file_id', DEFAULT_FIGMA_FILE_ID)
+    access_token = request.GET.get('access_token')
+    
+    if not access_token:
+        return JsonResponse({"error": "No access token provided"}, status=400)
+    
+    # Get the actual token value if it's a predefined token
+    if access_token in FIGMA_TOKENS:
+        access_token = FIGMA_TOKENS[access_token]
     
     url = "https://api.figma.com/v1/me"
-    headers = {"X-Figma-Token": FIGMA_ACCESS_TOKEN}
+    headers = {"X-Figma-Token": access_token}
 
     response = requests.get(url, headers=headers)
     print("MEE::: Figma User Info:", response.json())
@@ -339,6 +352,14 @@ def fetch_figma_image_urls(request):
         data = json.loads(request.body)
         node_ids = data.get('node_ids')
         file_id = data.get('file_id', DEFAULT_FIGMA_FILE_ID)
+        access_token = data.get('access_token')
+        
+        if not access_token:
+            return JsonResponse({"error": "No access token provided"}, status=400)
+            
+        # Get the actual token value if it's a predefined token
+        if access_token in FIGMA_TOKENS:
+            access_token = FIGMA_TOKENS[access_token]
         
         if not node_ids or not isinstance(node_ids, list):
             return JsonResponse({"error": "Invalid or missing 'node_ids' list."}, status=400)
@@ -347,7 +368,7 @@ def fetch_figma_image_urls(request):
 
     ids_query_param = ",".join(node_ids)
     url = f"https://api.figma.com/v1/images/{file_id}?ids={ids_query_param}&format=png&scale=2"
-    headers = {"X-Figma-Token": FIGMA_ACCESS_TOKEN}
+    headers = {"X-Figma-Token": access_token}
 
     try:
         response = requests.get(url, headers=headers, timeout=60)
@@ -362,4 +383,3 @@ def fetch_figma_image_urls(request):
     except requests.RequestException as e:
         print("INN EXCEPTION of fetch_figma_image_urls:", str(e))
         return JsonResponse({"error": f"Failed to fetch image URLs from Figma: {str(e)}"}, status=500)
-

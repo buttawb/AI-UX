@@ -81,6 +81,10 @@
             width: 100%;
         }
 
+        .viz-toggle-container::before {
+            display: none !important;
+        }
+
         .viz-toggle-checkbox {
             position: absolute;
             opacity: 0;
@@ -107,6 +111,10 @@
             user-select: none;
             width: 100%;
             text-align: center;
+        }
+
+        .viz-toggle-btn::before {
+            display: none !important;
         }
 
         .viz-toggle-btn:hover {
@@ -311,6 +319,20 @@
 
         <div id="controls">
             <div class="form-group">
+                <label for="figmaAccessToken">Figma Access Token</label>
+                <select id="figmaAccessToken" class="form-control">
+                    <option value="">Select a token or enter custom...</option>
+                    <option value="wahab_token">Wahab's Token</option>
+                    <option value="ramsha_token">Ramsha's Token</option>
+                    <option value="farzam_token">Farzam's Token</option>
+                    <option value="custom">Enter Custom Token</option>
+                </select>
+                <div id="customTokenInput" style="display: none; margin-top: 0.5rem;">
+                    <input type="text" id="customFigmaToken" class="form-control" placeholder="Enter your custom Figma access token">
+                </div>
+                <small class="form-text">Select a predefined token or enter your own Figma access token</small>
+            </div>
+            <div class="form-group">
                 <label for="figmaFileId">Figma File ID</label>
                 <input type="text" id="figmaFileId" value="{{ figma_file_id }}" class="form-control" placeholder="Enter your Figma file ID">
                 <small class="form-text">The unique identifier of your Figma file to analyze</small>
@@ -352,6 +374,26 @@
           const $loader = $('#loader');
           const $analysisContainer = $('#analysisContainer');
           const $loadingText = $('#loadingText');
+          const $customTokenInput = $('#customTokenInput');
+          const $figmaAccessToken = $('#figmaAccessToken');
+
+          // Handle token selection
+          $figmaAccessToken.on('change', function() {
+              if ($(this).val() === 'custom') {
+                  $customTokenInput.show();
+              } else {
+                  $customTokenInput.hide();
+              }
+          });
+
+          // Helper function to get the selected token
+          function getSelectedToken() {
+              const selectedValue = $figmaAccessToken.val();
+              if (selectedValue === 'custom') {
+                  return $('#customFigmaToken').val();
+              }
+              return selectedValue;
+          }
 
           // Helper function to ensure minimum display time for loading messages
           async function updateLoadingText(text, minDisplayTime = 1500) {
@@ -376,11 +418,19 @@
                   await updateLoadingText('Fetching Figma file structure...');
                   const figmaFileId = $('#figmaFileId').val();
                   const userPrompt = $('#userPrompt').val();
+                  const figmaToken = getSelectedToken();
+                  
+                  if (!figmaToken) {
+                      throw new Error("Please select or enter a Figma access token");
+                  }
                   
                   const figmaFileResponse = await $.ajax({
                       url: '/ux/fetch_figma_file/',
                       type: 'GET',
-                      data: { file_id: figmaFileId }
+                      data: { 
+                          file_id: figmaFileId,
+                          access_token: figmaToken
+                      }
                   });
                   console.log("Figma file fetched.", figmaFileResponse);
   
@@ -417,7 +467,8 @@
                           contentType: 'application/json',
                           data: JSON.stringify({ 
                               node_ids: frameIds,
-                              file_id: figmaFileId 
+                              file_id: figmaFileId,
+                              access_token: figmaToken
                           }),
                       }),
                       $.ajax({
@@ -1166,6 +1217,53 @@
               // Ensure all checkboxes are unchecked by default
               $('.viz-toggle-checkbox').prop('checked', false);
           });
+
+          function fetchFigmaFile() {
+              const fileId = $('#figmaFileId').val();
+              const figmaToken = getSelectedToken();
+              
+              if (!fileId) {
+                  showError('Please enter a Figma File ID');
+                  return;
+              }
+              
+              if (!figmaToken) {
+                  showError('Please select or enter a Figma access token');
+                  return;
+              }
+
+              showLoading();
+              
+              $.ajax({
+                  url: '/fetch-figma-file/',
+                  method: 'POST',
+                  data: JSON.stringify({
+                      file_id: fileId,
+                      access_token: figmaToken
+                  }),
+                  contentType: 'application/json',
+                  success: function(response) {
+                      hideLoading();
+                      if (response.error) {
+                          showError(response.error);
+                          return;
+                      }
+                      
+                      // Store the Figma data
+                      window.figmaData = response;
+                      
+                      // Update the preview
+                      updatePreview(response);
+                      
+                      // Enable the generate button
+                      $('#generateBtn').prop('disabled', false);
+                  },
+                  error: function(xhr) {
+                      hideLoading();
+                      showError(xhr.responseJSON?.error || 'Failed to fetch Figma file');
+                  }
+              });
+          }
       });
       </script>
 </body>

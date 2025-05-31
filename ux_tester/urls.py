@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from . import helpers
+from . import simulation_helpers
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -9,7 +9,8 @@ urlpatterns = [
     path('fetch_figma_file/', views.fetch_figma_file, name='fetch_figma_file'),
     path('generate_heatmap/', views.generate_heatmap, name='generate_heatmap'),
     path('fetch_figma_image_urls/', views.fetch_figma_image_urls, name='fetch_figma_image_url'),
-    path('generate_simulation/', helpers.generate_simulation, name='generate_simulation'),
+    path('simulation/', simulation_helpers.simulation, name='simulation'),
+    path('generate_simulation/', simulation_helpers.generate_simulation, name='generate_simulation'),
 ]
 
 if settings.DEBUG:
