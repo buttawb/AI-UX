@@ -7,8 +7,24 @@
     <title>AI Design Enhancement - UX Tester</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="/static/css/particles.css">
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="/static/js/particles-config.js"></script>
     <style>
+        #particles-js {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
+            background: linear-gradient(135deg, #ffffff 0%, #f0f4ff 100%);
+        }
+
         .container {
+            position: relative;
+            z-index: 1;
             max-width: 1200px;
             margin: 0 auto;
             padding: 2rem;
@@ -478,12 +494,14 @@
             background: rgba(37, 99, 235, 0.05);
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
     <script>
         // Add static URL prefix for JavaScript
         const STATIC_URL = "{% static '' %}";
     </script>
 </head>
 <body>
+    <div id="particles-js"></div>
     <div class="container">
         <div class="header">
             <h1>AI Design Enhancement</h1>
@@ -842,6 +860,99 @@
                     $submitBtn.prop('disabled', false);
                     $loader.hide();
                 }
+            });
+
+            // Initialize particles.js
+            particlesJS('particles-js', {
+                particles: {
+                    number: {
+                        value: 100,
+                        density: {
+                            enable: true,
+                            value_area: 800
+                        }
+                    },
+                    color: {
+                        value: ['#4f46e5', '#3b82f6', '#60a5fa']
+                    },
+                    shape: {
+                        type: ['circle', 'triangle'],
+                        stroke: {
+                            width: 0,
+                            color: '#e5e7eb'
+                        },
+                        polygon: {
+                            nb_sides: 5
+                        }
+                    },
+                    opacity: {
+                        value: 0.3,
+                        random: true,
+                        anim: {
+                            enable: true,
+                            speed: 1.5,
+                            opacity_min: 0.1,
+                            sync: false
+                        }
+                    },
+                    size: {
+                        value: 3,
+                        random: true,
+                        anim: {
+                            enable: true,
+                            speed: 3,
+                            size_min: 0.1,
+                            sync: false
+                        }
+                    },
+                    line_linked: {
+                        enable: true,
+                        distance: 150,
+                        color: '#4f46e5',
+                        opacity: 0.2,
+                        width: 1
+                    },
+                    move: {
+                        enable: true,
+                        speed: 3,
+                        direction: 'none',
+                        random: true,
+                        straight: false,
+                        out_mode: 'out',
+                        bounce: false,
+                        attract: {
+                            enable: true,
+                            rotateX: 600,
+                            rotateY: 1200
+                        }
+                    }
+                },
+                interactivity: {
+                    detect_on: 'canvas',
+                    events: {
+                        onhover: {
+                            enable: true,
+                            mode: 'grab'
+                        },
+                        onclick: {
+                            enable: true,
+                            mode: 'push'
+                        },
+                        resize: true
+                    },
+                    modes: {
+                        grab: {
+                            distance: 180,
+                            line_linked: {
+                                opacity: 0.4
+                            }
+                        },
+                        push: {
+                            particles_nb: 6
+                        }
+                    }
+                },
+                retina_detect: true
             });
 
             // Initialize token input visibility
