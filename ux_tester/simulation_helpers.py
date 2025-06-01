@@ -10,8 +10,11 @@ import base64
 from PIL import Image, ImageDraw
 import io
 import datetime
+from google import genai
+from google.genai import types
+import re
 
-from ux_tester.views import DEFAULT_FIGMA_FILE_ID, FIGMA_TOKENS, OPENAI_API_KEY_SULTAN, AVIALDO_GEMINI_KEY
+from ux_tester.views import DEFAULT_FIGMA_FILE_ID, FIGMA_TOKENS, OPENAI_API_KEY_SULTAN, GLOBAL_SEARCH_API_KEY
 
 # Simulation prompt template
 SIMULATION_PROMPT = '''
@@ -356,8 +359,7 @@ def call_openai_to_generate_script(task_description, frames, interactions, frame
 def call_gemini_to_generate_script(task_description, frames, interactions, frame_images):
     """Generate simulation script using Gemini API."""
     try:
-        model_name = "gemini-pro-vision"
-        gemini_api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={AVIALDO_GEMINI_KEY}"
+        client = genai.Client(api_key=GLOBAL_SEARCH_API_KEY)
         
         # Format the prompt with actual data
         prompt = SIMULATION_PROMPT.format(
@@ -397,40 +399,31 @@ def call_gemini_to_generate_script(task_description, frames, interactions, frame
                 }]
             })
         
-        # Prepare request data
-        data = {
-            "contents": contents,
-            "generationConfig": {
-                "temperature": 0.7,
-                "topK": 32,
-                "topP": 1,
-                "maxOutputTokens": 4000,
-            }
-        }
+        # Generate content using the model
+        response = client.models.generate_content(
+            model="gemini-1.5-pro-latest",
+            contents=contents
+        )
         
-        print("Sending request to Gemini...")
-        print("Request data:", json.dumps(data, indent=2))
+        print("Gemini response:", response)
         
-        response = requests.post(gemini_api_url, json=data)
-        print("Gemini response status:", response.status_code)
-        print("Gemini response headers:", dict(response.headers))
-        print("Gemini response text:", response.text)
-        
-        response.raise_for_status()
-        response_json = response.json()
-        
-        if not response_json.get('candidates'):
+        if not response.candidates:
             raise ValueError("No candidates in Gemini response")
             
-        content = response_json['candidates'][0]['content']['parts'][0]['text']
+        content = response.candidates[0].content.parts[0].text
         print("Gemini response content:", content)
         
         # Parse the response
         try:
-            json_start = content.find('{')
-            json_end = content.rfind('}') + 1
+            # Clean the content by removing comments and markdown code blocks
+            cleaned_content = re.sub(r'//.*?$', '', content, flags=re.MULTILINE)  # Remove single-line comments
+            cleaned_content = re.sub(r'/\*.*?\*/', '', cleaned_content, flags=re.DOTALL)  # Remove multi-line comments
+            cleaned_content = re.sub(r'```(?:json)?|```', '', cleaned_content, flags=re.IGNORECASE).strip()  # Remove markdown code blocks
+            
+            json_start = cleaned_content.find('{')
+            json_end = cleaned_content.rfind('}') + 1
             if json_start >= 0 and json_end > json_start:
-                json_str = content[json_start:json_end]
+                json_str = cleaned_content[json_start:json_end]
                 print("Extracted JSON string:", json_str)
                 parsed_json = json.loads(json_str)
                 print("Parsed JSON:", json.dumps(parsed_json, indent=2))
@@ -451,16 +444,13 @@ def call_gemini_to_generate_script(task_description, frames, interactions, frame
                 
                 return json.dumps(parsed_json)
             else:
-                print("Content that failed to parse:", content)
+                print("Content that failed to parse:", cleaned_content)
                 raise ValueError("No JSON object found in response")
         except json.JSONDecodeError as e:
             print("JSON parsing error:", str(e))
-            print("Content that failed to parse:", content)
+            print("Content that failed to parse:", cleaned_content)
             raise ValueError(f"Invalid JSON in Gemini response: {str(e)}")
             
-    except requests.exceptions.RequestException as e:
-        print("Gemini API request failed:", str(e))
-        raise ValueError(f"Gemini API request failed: {str(e)}")
     except Exception as e:
         print(f"Error in call_gemini_to_generate_script: {str(e)}")
         raise ValueError(f"Error generating simulation script with Gemini: {str(e)}")
@@ -468,7 +458,7 @@ def call_gemini_to_generate_script(task_description, frames, interactions, frame
 def generate_simulation_script(task_description, frames, interactions, frame_images, use_gemini=False):
     """Generate simulation script using either OpenAI or Gemini."""
     try:
-        if use_gemini and AVIALDO_GEMINI_KEY:
+        if use_gemini and GLOBAL_SEARCH_API_KEY:
             print("Using Gemini for simulation generation...")
             return call_gemini_to_generate_script(task_description, frames, interactions, frame_images)
         else:

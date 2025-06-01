@@ -814,17 +814,17 @@
         </div>
 
         <div class="nav-buttons">
-            <a href="/ux/upload_design/" class="nav-button active">
+            <a href="/upload_design/" class="nav-button active">
                 <span class="icon">📊</span>
                 <span>UX Analysis</span>
                 {% comment %} <span class="badge">Heatmap</span> {% endcomment %}
             </a>
-            <a href="/ux/simulation/" class="nav-button">
+            <a href="/simulation/" class="nav-button">
                 <span class="icon">🎬</span>
                 <span>User Journey</span>
                 <span class="badge">New!</span>
             </a>
-            <a href="/ux/design_iteration/" class="nav-button">
+            <a href="/design_iteration/" class="nav-button">
                 <span class="icon">🔄</span>
                 <span>Design Iteration</span>
                 <span class="badge">New!</span>
@@ -1046,7 +1046,7 @@
                   }
                   
                   const figmaFileResponse = await $.ajax({
-                      url: '/ux/fetch_figma_file/',
+                      url: '/fetch_figma_file/',
                       type: 'GET',
                       data: { 
                           file_id: figmaFileId,
@@ -1083,7 +1083,7 @@
                   await updateLoadingText('Fetching image URLs and preparing for AI analysis...');
                   const [imageResponse, analysisResponse] = await Promise.all([
                       $.ajax({
-                          url: '/ux/fetch_figma_image_urls/',
+                          url: '/fetch_figma_image_urls/',
                           type: 'POST',
                           contentType: 'application/json',
                           data: JSON.stringify({ 
@@ -1093,7 +1093,7 @@
                           }),
                       }),
                       $.ajax({
-                          url: '/ux/generate_heatmap/',
+                          url: '/generate_heatmap/',
                           type: 'POST',
                           contentType: 'application/json',
                           data: JSON.stringify({ 
@@ -1944,7 +1944,7 @@
             }
     
             if (frameAnalysis.drop_off_points) {
-                const url = `/ux/design_iteration/?file_id=${figmaFileId}&token=${encodeURIComponent(figmaToken)}&frame_id=${originalFrameId}&dropoffs=${encodeURIComponent(JSON.stringify(frameAnalysis.drop_off_points))}`;
+                const url = `/design_iteration/?file_id=${figmaFileId}&token=${encodeURIComponent(figmaToken)}&frame_id=${originalFrameId}&dropoffs=${encodeURIComponent(JSON.stringify(frameAnalysis.drop_off_points))}`;
                 console.log('Opening URL:', url);
                 window.open(url, '_blank');
             } else {

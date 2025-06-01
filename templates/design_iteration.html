@@ -547,7 +547,7 @@
                 <h3>Welcome to AI Design Enhancement!</h3>
                 <p>This tool helps improve your designs by addressing UX issues. For the best experience:</p>
                 <ol>
-                    <li>Start with the <a href="/ux/upload_design/">UX Analysis</a> to identify areas for improvement</li>
+                    <li>Start with the <a href="/upload_design/">UX Analysis</a> to identify areas for improvement</li>
                     <li>Use the "Enhance with AI" button on frames with UX scores below 80%</li>
                     <li>Or enter your Figma details below to enhance a design directly</li>
                 </ol>
@@ -556,15 +556,15 @@
         {% endif %}
 
         <div class="nav-buttons">
-            <a href="/ux/upload_design/" class="nav-button">
+            <a href="/upload_design/" class="nav-button">
                 <span class="icon">📊</span>
                 <span>UX Analysis</span>
             </a>
-            <a href="/ux/simulation/" class="nav-button">
+            <a href="/simulation/" class="nav-button">
                 <span class="icon">🎬</span>
                 <span>User Journey</span>
             </a>
-            <a href="/ux/design_iteration/" class="nav-button active">
+            <a href="/design_iteration/" class="nav-button active">
                 <span class="icon">🔄</span>
                 <span>Design Iteration</span>
                 <span class="badge">New!</span>
@@ -857,7 +857,7 @@
                     }
 
                     const response = await $.ajax({
-                        url: '/ux/generate_iteration/',
+                        url: '/generate_iteration/',
                         type: 'POST',
                         data: formData,
                         processData: false,

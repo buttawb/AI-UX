@@ -8,6 +8,8 @@ from PIL import Image
 from io import BytesIO
 from google import genai
 from google.genai import types
+
+from ux_tester.gemini_keys import GLOBAL_SEARCH_API_KEY
 from .views import FIGMA_TOKENS, AVIALDO_GEMINI_KEY
 import os
 import base64
@@ -60,7 +62,7 @@ def design_iteration_view(request):
 def generate_with_gemini(image, dropoff_points):
     """Generate design iteration using Gemini API"""
     # Initialize the Gemini client
-    client = genai.Client(api_key=AVIALDO_GEMINI_KEY)
+    client = genai.Client(api_key=GLOBAL_SEARCH_API_KEY)
     
     # Format dropoff points for the prompt
     dropoff_text = "\n".join([f"- {point.get('reason', '')}" for point in dropoff_points])
@@ -122,7 +124,17 @@ def generate_iteration(request):
     """
     if request.method == 'POST':
         try:
-            data = json.loads(request.body)
+            # Handle both JSON and form-data requests
+            if request.content_type == 'application/json':
+                data = json.loads(request.body)
+            else:
+                # Handle form-data
+                data = {
+                    'figma_token': request.POST.get('figma_token'),
+                    'design_data': json.loads(request.POST.get('design_data', '{}')),
+                    'dropoff_points': json.loads(request.POST.get('dropoff_points', '[]'))
+                }
+            
             figma_token = data.get('figma_token')
             design_data = data.get('design_data')
             dropoff_points = data.get('dropoff_points', [])

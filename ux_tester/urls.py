@@ -6,6 +6,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
+    path('', views.landing_page, name='landing_page'),
     path('upload_design/', views.upload_design, name='upload_design'),
     path('fetch_figma_file/', views.fetch_figma_file, name='fetch_figma_file'),
     path('generate_heatmap/', views.generate_heatmap, name='generate_heatmap'),

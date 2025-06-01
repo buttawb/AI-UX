@@ -3,7 +3,7 @@ import requests
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from .gemini_keys import AVIALDO_GEMINI_KEY  # Ensure you have this file with your API key
+from .gemini_keys import AVIALDO_GEMINI_KEY, GLOBAL_SEARCH_API_KEY  # Ensure you have this file with your API key
 import re
 import os
 import tempfile
@@ -11,6 +11,8 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 import time
 import base64
+from google import genai
+from google.genai import types
 
 # Default Figma file ID (will be overridden by user input)
 DEFAULT_FIGMA_FILE_ID = 'dl5VgCWMZwL3uRi9mIOMvX'
@@ -145,6 +147,12 @@ Here is the Figma design data:
 {figma_data}
 """
 
+def landing_page(request):
+    """
+    View function for the landing page.
+    """
+    return render(request, 'index.html')
+
 @csrf_exempt
 def upload_design(request):
     """
@@ -254,7 +262,7 @@ def call_openai_heatmap(figma_data, user_prompt=''):
 @csrf_exempt
 def call_gemini_heatmap(figma_data, user_prompt=''):
     """
-    Get UX analysis from Google's Gemini API using direct HTTP requests.
+    Get UX analysis from Google's Gemini API using the genai client.
     """
     # Extract frame data
     frame_data = {}
@@ -299,43 +307,30 @@ def call_gemini_heatmap(figma_data, user_prompt=''):
     ]
 
     last_error = None
+    client = genai.Client(api_key=GLOBAL_SEARCH_API_KEY)
+    
     for model_name in model_names:
         try:
-            gemini_api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={AVIALDO_GEMINI_KEY}"
-            
-            headers = {
-                'Content-Type': 'application/json',
-            }
+            print(f"Attempting with model: {model_name}")
 
-            request_body = {
-                "contents": [{
+            response = client.models.generate_content(
+                model=model_name,
+                contents=[{
+                    "role": "user",
                     "parts": [{"text": prompt}]
                 }],
-                "generationConfig": {
-                    "temperature": 0.9,
-                    "topK": 60,
-                    "topP": 0.98,
-                    "maxOutputTokens": 8192,
-                    "candidateCount": 1,
-                    "stopSequences": [],
-                }
-            }
-
-            print(f"Attempting with model: {model_name}")
-            response = requests.post(gemini_api_url, headers=headers, json=request_body, timeout=900)
-            response.raise_for_status()
+            )
             
-            response_json = response.json()
-            if "candidates" in response_json and response_json["candidates"]:
-                content_data = response_json["candidates"][0].get("content")
-                if not content_data or "parts" not in content_data or not content_data["parts"]:
+            if response.candidates:
+                content_data = response.candidates[0].content
+                if not content_data or not content_data.parts:
                     continue
                     
-                parts = content_data["parts"]
-                if "text" not in parts[0]:
+                parts = content_data.parts
+                if not parts[0].text:
                     continue
                     
-                content = parts[0]["text"]
+                content = parts[0].text
                 heatmap_report = extract_json_from_model_response(content)
                 
                 if "analysis_data" in heatmap_report:
@@ -349,16 +344,6 @@ def call_gemini_heatmap(figma_data, user_prompt=''):
                 
                 return heatmap_report
                 
-        except requests.exceptions.HTTPError as e:
-            last_error = e
-            print(f"Failed with model {model_name}: {str(e)}")
-            if e.response.status_code == 400 and "token count" in e.response.text.lower():
-                print(f"Token limit exceeded with model {model_name}, trying next model...")
-                continue
-            if e.response.status_code == 404:
-                print(f"Model {model_name} not found, trying next model...")
-                continue
-            raise Exception(f"Failed to call Gemini API (HTTPError): {str(e)}. Response: {e.response.text}")
         except Exception as e:
             last_error = e
             print(f"Error with model {model_name}: {str(e)}")
