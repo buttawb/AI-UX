@@ -25,25 +25,6 @@
         .container {
             position: relative;
             z-index: 1;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 3rem;
-        }
-
-        .header h1 {
-            font-size: 2.5rem;
-            color: var(--primary);
-            margin-bottom: 1rem;
-        }
-
-        .header p {
-            font-size: 1.1rem;
-            color: var(--text-light);
         }
 
         .design-form {
@@ -504,8 +485,13 @@
     <div id="particles-js"></div>
     <div class="container">
         <div class="header">
-            <h1>AI Design Enhancement</h1>
-            <p>Transform your design with AI-powered improvements</p>
+            <div class="main-title">
+                <h1 class="gradient-text">AI-UX</h1>
+            </div>
+            <div class="sub-title">
+                <h2>Design Iteration</h2>
+                <p>Let AI enhance your design with intelligent suggestions and improvements</p>
+            </div>
         </div>
 
         {% if error %}
