@@ -5,10 +5,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI UX Tester - User Journey Simulation</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <link rel="stylesheet" href="{% static 'css/particles.css' %}">
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="{% static 'js/particles-config.js' %}"></script>
     <script>
-        // Add static URL prefix for JavaScript
         const STATIC_URL = "{% static '' %}";
     </script>
     <style>
@@ -395,17 +398,22 @@
     </style>
 </head>
 <body>
+    <div id="particles-js"></div>
     <div class="container">
         <div class="header">
-            <h1>User Journey Simulation</h1>
-            <p>Watch AI simulate user interactions with your design to identify potential UX issues</p>
+            <div class="main-title">
+                <h1 class="gradient-text">AI-UX</h1>
+            </div>
+            <div class="sub-title">
+                <h2>User Journey Simulation</h2>
+                <p>Watch AI simulate user interactions with your design to identify potential UX issues</p>
+            </div>
         </div>
 
         <div class="nav-buttons">
             <a href="/ux/upload_design/" class="nav-button">
                 <span class="icon">📊</span>
                 <span>UX Analysis</span>
-                {% comment %} <span class="badge">Heatmap</span> {% endcomment %}
             </a>
             <a href="/ux/simulation/" class="nav-button active">
                 <span class="icon">🎬</span>
@@ -419,7 +427,7 @@
             </a>
         </div>
 
-        <div class="simulation-container">
+        <div class="card simulation-container">
             <div class="form-group">
                 <label for="figmaAccessToken">Figma Access Token</label>
                 <select id="figmaAccessToken" class="form-control">
@@ -434,18 +442,19 @@
                 </div>
                 <small class="form-text">Select a predefined token or enter your own Figma access token</small>
             </div>
+
             <div class="input-method-selector">
-                <div class="input-method-card" data-method="figma">
+                <div class="card input-method-card" data-method="figma">
                     <div class="icon">🎨</div>
                     <h3>Figma File</h3>
                     <p>Enter your Figma file ID to analyze</p>
                 </div>
-                <div class="input-method-card" data-method="upload">
+                <div class="card input-method-card" data-method="upload">
                     <div class="icon">📁</div>
                     <h3>Upload Design</h3>
                     <p>Upload your design file directly</p>
                 </div>
-                <div class="input-method-card" data-method="url">
+                <div class="card input-method-card" data-method="url">
                     <div class="icon">🔗</div>
                     <h3>Design URL</h3>
                     <p>Provide a URL to your design</p>
@@ -485,38 +494,35 @@
             <div class="task-input-section">
                 <h3>What would you like to simulate?</h3>
                 <div class="task-suggestions">
-                    <div class="task-suggestion-chip">Buy a product</div>
-                    <div class="task-suggestion-chip">Send a message</div>
-                    <div class="task-suggestion-chip">Create an account</div>
-                    <div class="task-suggestion-chip">Search for items</div>
-                    <div class="task-suggestion-chip">Complete checkout</div>
-                    {% comment %} <div class="task-suggestion-chip">Upload content</div> {% endcomment %}
+                    <div class="card task-suggestion-chip">Buy a product</div>
+                    <div class="card task-suggestion-chip">Send a message</div>
+                    <div class="card task-suggestion-chip">Create an account</div>
+                    <div class="card task-suggestion-chip">Search for items</div>
+                    <div class="card task-suggestion-chip">Complete checkout</div>
                 </div>
                 <div class="form-group">
                     <label for="taskDescription">Task Description</label>
                     <textarea id="taskDescription" class="form-control" rows="3" placeholder="Describe the user journey you want to simulate..."></textarea>
                     <small class="form-text">Be specific about the steps and goals of the user journey</small>
                 </div>
-
-            <div id="simulationContainer" style="display:none; position: relative; margin-top: 20px;"></div>
-            <a href="#" id="downloadSimulation" style="display:none; margin-top: 10px;">Download Simulation JSON</a>
             </div>
 
-            <button id="startSimulationBtn" class="form-control">Start Simulation</button>
-
-
+            <button id="startSimulationBtn" class="btn">
+                <span class="icon">✨</span>
+                <span>Start Simulation</span>
+            </button>
         </div>
 
-        <div class="video-container" id="simulationVideo">
+        <div class="card video-container" id="simulationVideo">
             <video id="simulationPlayer" loop>
                 <source src="" type="video/webm">
                 Your browser does not support the video tag.
             </video>
             <div class="video-controls">
-                <button class="video-control-btn" id="playPauseBtn">▶️</button>
-                <button class="video-control-btn" id="fullscreenBtn">⛶</button>
+                <button class="btn video-control-btn" id="playPauseBtn">▶️</button>
+                <button class="btn video-control-btn" id="fullscreenBtn">⛶</button>
             </div>
-            <button class="download-btn" id="downloadBtn">
+            <button class="btn download-btn" id="downloadBtn">
                 <span>⬇️</span>
                 <span>Download</span>
             </button>
@@ -524,7 +530,7 @@
     </div>
 
     <div class="loading-overlay" id="loadingOverlay">
-        <div class="loading-content">
+        <div class="card loading-content">
             <div class="loading-spinner"></div>
             <div class="loading-text">Generating Simulation</div>
             <div class="loading-subtext" id="loadingSubtext">This may take a few minutes...</div>
@@ -532,7 +538,6 @@
         </div>
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         $(document).ready(function() {
             const $inputMethods = $('.input-method-card');

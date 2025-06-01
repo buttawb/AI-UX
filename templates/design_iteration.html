@@ -5,29 +5,26 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI Design Enhancement - UX Tester</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="/static/css/particles.css">
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="/static/js/particles-config.js"></script>
     <style>
+        #particles-js {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
+            background: linear-gradient(135deg, #ffffff 0%, #f0f4ff 100%);
+        }
+
         .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 3rem;
-        }
-
-        .header h1 {
-            font-size: 2.5rem;
-            color: var(--primary);
-            margin-bottom: 1rem;
-        }
-
-        .header p {
-            font-size: 1.1rem;
-            color: var(--text-light);
+            position: relative;
+            z-index: 1;
         }
 
         .design-form {
@@ -384,28 +381,167 @@
         .info-content a:hover {
             text-decoration: underline;
         }
+
+        .input-method-selector {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .input-method-card {
+            background: var(--surface);
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .input-method-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary);
+            box-shadow: var(--shadow);
+        }
+
+        .input-method-card.active {
+            border-color: var(--primary);
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.05), rgba(79, 70, 229, 0.05));
+        }
+
+        .input-method-card .icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+
+        .input-method-card h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+        }
+
+        .input-method-card p {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            margin: 0;
+        }
+
+        .input-section {
+            display: none;
+        }
+
+        .file-upload-container {
+            position: relative;
+            margin-top: 1rem;
+        }
+
+        .file-upload-input {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .file-upload-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 1rem;
+            background: var(--background);
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            color: var(--text-light);
+            transition: all 0.2s ease;
+        }
+
+        .file-upload-label:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .file-upload-label .icon {
+            font-size: 1.5rem;
+        }
+
+        .file-upload-container.dragover .file-upload-label {
+            border-color: var(--primary);
+            background: rgba(37, 99, 235, 0.05);
+        }
+
+        .warning-message {
+            background: #fff7ed;
+            border: 1px solid #fdba74;
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            color: #c2410c;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        .warning-message .icon {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .warning-message .content {
+            flex: 1;
+        }
+
+        .warning-message .title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            font-size: 1.1rem;
+        }
+
+        .warning-message .description {
+            color: #9a3412;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
     <script>
         // Add static URL prefix for JavaScript
         const STATIC_URL = "{% static '' %}";
     </script>
 </head>
 <body>
+    <div id="particles-js"></div>
     <div class="container">
         <div class="header">
-            <h1>AI Design Enhancement</h1>
-            <p>Transform your design with AI-powered improvements</p>
+            <div class="main-title">
+                <h1 class="gradient-text">AI-UX</h1>
+            </div>
+            <div class="sub-title">
+                <h2>Design Iteration</h2>
+                <p>Let AI enhance your design with intelligent suggestions and improvements</p>
+            </div>
         </div>
 
         {% if error %}
-        <div class="error-message">
+        <div class="card error-message">
             <span class="icon">⚠️</span>
             <span>{{ error }}</span>
         </div>
         {% endif %}
 
         {% if is_direct_access %}
-        <div class="info-message">
+        <div class="card info-message">
             <span class="icon">ℹ️</span>
             <div class="info-content">
                 <h3>Welcome to AI Design Enhancement!</h3>
@@ -435,12 +571,15 @@
             </a>
         </div>
 
-        <div class="warning-message">
+        <div class="card warning-message">
             <span class="icon">⚠️</span>
-            <span>Please upload 1-2 frames for optimal results</span>
+            <div class="content">
+                <div class="title">Frame Upload Recommendation</div>
+                <div class="description">For optimal results, please upload a single frame. This helps our AI provide focused and precise design improvements.</div>
+            </div>
         </div>
 
-        <div class="design-form">
+        <div class="card design-form">
             <div class="form-group">
                 <label for="figmaAccessToken">Figma Access Token</label>
                 <select id="figmaAccessToken" class="form-control">
@@ -448,27 +587,68 @@
                     <option value="wahab_token" {% if token == 'wahab_token' %}selected{% endif %}>Wahab's Token</option>
                     <option value="ramsha_token" {% if token == 'ramsha_token' %}selected{% endif %}>Ramsha's Token</option>
                     <option value="farzam_token" {% if token == 'farzam_token' %}selected{% endif %}>Farzam's Token</option>
-                    {% comment %} <option value="custom" {% if token and token not in ['wahab_token', 'ramsha_token', 'farzam_token'] %}selected{% endif %}>Enter Custom Token</option> {% endcomment %}
                 </select>
                 <div id="customTokenInput" style="display: none; margin-top: 0.5rem;">
                     <input type="text" id="customFigmaToken" class="form-control" placeholder="Enter your custom Figma access token" value="{{ token }}">
                 </div>
             </div>
 
-            <div class="form-group">
-                <label for="figmaFileId">Figma File ID</label>
-                <input type="text" id="figmaFileId" class="form-control" value="{{ file_id }}" placeholder="Enter your Figma file ID">
+            <div class="input-method-selector">
+                <div class="card input-method-card" data-method="figma">
+                    <div class="icon">🎨</div>
+                    <h3>Figma File</h3>
+                    <p>Enter your Figma file ID to analyze</p>
+                </div>
+                <div class="card input-method-card" data-method="upload">
+                    <div class="icon">📁</div>
+                    <h3>Upload Design</h3>
+                    <p>Upload your design file directly</p>
+                </div>
+                <div class="card input-method-card" data-method="url">
+                    <div class="icon">🔗</div>
+                    <h3>Design URL</h3>
+                    <p>Provide a URL to your design</p>
+                </div>
+            </div>
+
+            <div id="figmaInput" class="input-section">
+                <div class="form-group">
+                    <label for="figmaFileId">Figma File ID</label>
+                    <input type="text" id="figmaFileId" class="form-control" value="{{ file_id }}" placeholder="Enter your Figma file ID">
+                </div>
+            </div>
+
+            <div id="uploadInput" class="input-section" style="display: none;">
+                <div class="form-group">
+                    <label>Upload Design File</label>
+                    <div class="file-upload-container">
+                        <input type="file" id="designFile" class="file-upload-input" accept=".fig,.sketch,.xd">
+                        <label for="designFile" class="file-upload-label">
+                            <span class="icon">📁</span>
+                            <span>Click to upload or drag and drop</span>
+                        </label>
+                    </div>
+                    <small class="form-text">Supported formats: Figma (.fig)</small>
+                </div>
+            </div>
+
+            <div id="urlInput" class="input-section" style="display: none;">
+                <div class="form-group">
+                    <label for="designUrl">Design URL</label>
+                    <input type="url" id="designUrl" class="form-control" placeholder="Enter the URL to your design">
+                    <small class="form-text">Provide a direct link to your design file</small>
+                </div>
             </div>
 
             <div class="form-group">
                 <label>UX Issues to Address</label>
-                <div class="dropoff-points">
+                <div class="card dropoff-points">
                     {% if dropoff_points %}
                         {% for point in dropoff_points %}
                         <div class="dropoff-point">
                             <span class="icon">⚠️</span>
                             <span>{{ point.reason }}</span>
-                            <button class="remove-issue" data-index="{{ forloop.counter0 }}">×</button>
+                            <button class="btn remove-issue" data-index="{{ forloop.counter0 }}">×</button>
                         </div>
                         {% endfor %}
                     {% else %}
@@ -476,7 +656,7 @@
                     {% endif %}
                     <div class="add-issue-form">
                         <input type="text" id="newIssue" class="form-control" placeholder="Add a UX issue to address...">
-                        <button id="addIssue" class="add-issue-btn">
+                        <button id="addIssue" class="btn add-issue-btn">
                             <span class="icon">+</span>
                             <span>Add Issue</span>
                         </button>
@@ -484,28 +664,28 @@
                 </div>
             </div>
 
-            <button id="submitBtn" class="submit-btn">
+            <button id="submitBtn" class="btn">
                 <span class="icon">✨</span>
                 <span>Generate Enhanced Design</span>
             </button>
         </div>
 
         <div id="loader" class="loader">
-            <div class="spinner"></div>
-            <p>Generating enhanced design... This may take a few minutes</p>
+            <div class="card loading-content">
+                <div class="spinner"></div>
+                <p>Generating enhanced design... This may take a few minutes</p>
+            </div>
         </div>
 
         <div id="resultContainer" class="result-container">
             <div class="result-grid">
-                <div class="result-card">
+                <div class="card result-card">
                     <h3>Original Design</h3>
                     <img id="originalImage" class="result-image" src="" alt="Original design">
                 </div>
-                <div class="result-card">
+                <div class="card result-card">
                     <h3>Enhanced Design</h3>
                     <img id="enhancedImage" class="result-image" src="" alt="Enhanced design">
-                    {% comment %} <h4>Key Improvements</h4> {% endcomment %}
-                    {% comment %} <ul id="improvementsList" class="improvements-list"></ul> {% endcomment %}
                 </div>
             </div>
         </div>
@@ -519,6 +699,55 @@
             const $resultContainer = $('#resultContainer');
             const $customTokenInput = $('#customTokenInput');
             const $figmaAccessToken = $('#figmaAccessToken');
+            const $inputMethodCards = $('.input-method-card');
+            const $inputSections = $('.input-section');
+
+            // Handle input method selection
+            $inputMethodCards.on('click', function() {
+                const method = $(this).data('method');
+                $inputMethodCards.removeClass('active');
+                $(this).addClass('active');
+                $inputSections.hide();
+                $(`#${method}Input`).show();
+            });
+
+            // Set initial active state
+            $inputMethodCards.first().addClass('active');
+            $('#figmaInput').show();
+
+            // Handle file upload
+            const $fileUploadInput = $('#designFile');
+            const $fileUploadLabel = $('.file-upload-label');
+
+            $fileUploadInput.on('change', function(e) {
+                const fileName = e.target.files[0]?.name;
+                if (fileName) {
+                    $fileUploadLabel.find('span:last').text(fileName);
+                }
+            });
+
+            // Handle drag and drop
+            const $fileUploadContainer = $('.file-upload-container');
+
+            $fileUploadContainer.on('dragover', function(e) {
+                e.preventDefault();
+                $(this).addClass('dragover');
+            });
+
+            $fileUploadContainer.on('dragleave', function(e) {
+                e.preventDefault();
+                $(this).removeClass('dragover');
+            });
+
+            $fileUploadContainer.on('drop', function(e) {
+                e.preventDefault();
+                $(this).removeClass('dragover');
+                const files = e.originalEvent.dataTransfer.files;
+                if (files.length) {
+                    $fileUploadInput.prop('files', files);
+                    $fileUploadLabel.find('span:last').text(files[0].name);
+                }
+            });
 
             // Handle token selection
             $figmaAccessToken.on('change', function() {
@@ -570,16 +799,39 @@
 
             $submitBtn.on('click', async function() {
                 const figmaToken = getSelectedToken();
-                const fileId = $('#figmaFileId').val();
+                const activeMethod = $('.input-method-card.active').data('method');
+                let designData = {};
 
                 if (!figmaToken) {
                     alert("Please select or enter a Figma access token");
                     return;
                 }
 
-                if (!fileId) {
-                    alert("Please enter a Figma file ID");
-                    return;
+                switch (activeMethod) {
+                    case 'figma':
+                        const fileId = $('#figmaFileId').val();
+                        if (!fileId) {
+                            alert("Please enter a Figma file ID");
+                            return;
+                        }
+                        designData = { id: fileId };
+                        break;
+                    case 'upload':
+                        const file = $('#designFile')[0].files[0];
+                        if (!file) {
+                            alert("Please upload a design file");
+                            return;
+                        }
+                        designData = { file: file };
+                        break;
+                    case 'url':
+                        const url = $('#designUrl').val();
+                        if (!url) {
+                            alert("Please enter a design URL");
+                            return;
+                        }
+                        designData = { url: url };
+                        break;
                 }
 
                 $submitBtn.prop('disabled', true);
@@ -595,17 +847,21 @@
                 });
 
                 try {
+                    const formData = new FormData();
+                    formData.append('figma_token', figmaToken);
+                    formData.append('design_data', JSON.stringify(designData));
+                    formData.append('dropoff_points', JSON.stringify(dropoffPoints));
+
+                    if (activeMethod === 'upload') {
+                        formData.append('file', $('#designFile')[0].files[0]);
+                    }
+
                     const response = await $.ajax({
                         url: '/ux/generate_iteration/',
                         type: 'POST',
-                        contentType: 'application/json',
-                        data: JSON.stringify({
-                            figma_token: figmaToken,
-                            design_data: {
-                                id: fileId
-                            },
-                            dropoff_points: dropoffPoints
-                        })
+                        data: formData,
+                        processData: false,
+                        contentType: false
                     });
 
                     if (response.status === 'success') {
@@ -632,6 +888,99 @@
                     $submitBtn.prop('disabled', false);
                     $loader.hide();
                 }
+            });
+
+            // Initialize particles.js
+            particlesJS('particles-js', {
+                particles: {
+                    number: {
+                        value: 100,
+                        density: {
+                            enable: true,
+                            value_area: 800
+                        }
+                    },
+                    color: {
+                        value: ['#4f46e5', '#3b82f6', '#60a5fa']
+                    },
+                    shape: {
+                        type: ['circle', 'triangle'],
+                        stroke: {
+                            width: 0,
+                            color: '#e5e7eb'
+                        },
+                        polygon: {
+                            nb_sides: 5
+                        }
+                    },
+                    opacity: {
+                        value: 0.3,
+                        random: true,
+                        anim: {
+                            enable: true,
+                            speed: 1.5,
+                            opacity_min: 0.1,
+                            sync: false
+                        }
+                    },
+                    size: {
+                        value: 3,
+                        random: true,
+                        anim: {
+                            enable: true,
+                            speed: 3,
+                            size_min: 0.1,
+                            sync: false
+                        }
+                    },
+                    line_linked: {
+                        enable: true,
+                        distance: 150,
+                        color: '#4f46e5',
+                        opacity: 0.2,
+                        width: 1
+                    },
+                    move: {
+                        enable: true,
+                        speed: 3,
+                        direction: 'none',
+                        random: true,
+                        straight: false,
+                        out_mode: 'out',
+                        bounce: false,
+                        attract: {
+                            enable: true,
+                            rotateX: 600,
+                            rotateY: 1200
+                        }
+                    }
+                },
+                interactivity: {
+                    detect_on: 'canvas',
+                    events: {
+                        onhover: {
+                            enable: true,
+                            mode: 'grab'
+                        },
+                        onclick: {
+                            enable: true,
+                            mode: 'push'
+                        },
+                        resize: true
+                    },
+                    modes: {
+                        grab: {
+                            distance: 180,
+                            line_linked: {
+                                opacity: 0.4
+                            }
+                        },
+                        push: {
+                            particles_nb: 6
+                        }
+                    }
+                },
+                retina_detect: true
             });
 
             // Initialize token input visibility
