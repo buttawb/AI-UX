@@ -474,6 +474,45 @@
             border-color: var(--primary);
             background: rgba(37, 99, 235, 0.05);
         }
+
+        .warning-message {
+            background: #fff7ed;
+            border: 1px solid #fdba74;
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            color: #c2410c;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        .warning-message .icon {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .warning-message .content {
+            flex: 1;
+        }
+
+        .warning-message .title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            font-size: 1.1rem;
+        }
+
+        .warning-message .description {
+            color: #9a3412;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
     <script>
@@ -534,7 +573,10 @@
 
         <div class="card warning-message">
             <span class="icon">⚠️</span>
-            <span>Please upload 1-2 frames for optimal results</span>
+            <div class="content">
+                <div class="title">Frame Upload Recommendation</div>
+                <div class="description">For optimal results, please upload a single frame. This helps our AI provide focused and precise design improvements.</div>
+            </div>
         </div>
 
         <div class="card design-form">
