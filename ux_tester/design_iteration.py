@@ -8,9 +8,10 @@ from PIL import Image
 from io import BytesIO
 from google import genai
 from google.genai import types
+from openai import OpenAI
 
 from ux_tester.gemini_keys import GLOBAL_SEARCH_API_KEY
-from .views import FIGMA_TOKENS, AVIALDO_GEMINI_KEY
+from .views import FIGMA_TOKENS, AVIALDO_GEMINI_KEY, OPENAI_API_KEY_SULTAN
 import os
 import base64
 
@@ -69,10 +70,19 @@ def generate_with_gemini(image, dropoff_points):
     
     # Create the prompt with dropoff points
     text_input = GEMINI_DESIGN_ITERATION_PROMPT.format(dropoff_points=dropoff_text)
+    print(f"Original image mode: {image.mode}")
     
-    # Ensure image is in highest quality and preserve text
-    if image.mode != 'RGBA':
-        image = image.convert('RGBA')
+    # Convert image to RGB for optimal Gemini processing
+    if image.mode in ['RGBA', 'LA']:
+        # Create a white background
+        background = Image.new('RGB', image.size, (255, 255, 255))
+        # Paste the image on the background
+        background.paste(image, mask=image.split()[-1])
+        image = background
+    elif image.mode != 'RGB':
+        image = image.convert('RGB')
+    
+    print(f"Converted image mode: {image.mode}")
     
     # Save a high-quality version of the original for reference
     # reference_path = "static/generated_images/reference_design.png"
@@ -80,8 +90,8 @@ def generate_with_gemini(image, dropoff_points):
     # image.save(reference_path, 'PNG', quality=100, optimize=False)
     
     response = client.models.generate_content(
-        model="gemini-2.0-flash-preview-image-generation",
-        contents=[text_input, image],
+        model="gemini-2.0-flash-exp",
+        contents=["Give me a sample image of beatiful mobile chat design", image],
         config=types.GenerateContentConfig(
             response_modalities=['TEXT', 'IMAGE'],
         )
@@ -116,6 +126,107 @@ def generate_with_gemini(image, dropoff_points):
             "image": image_response
         }
     return None
+
+def generate_with_openai(image, dropoff_points):
+    """Generate design iteration using OpenAI API"""
+    # Initialize the OpenAI client with minimal configuration
+    client = OpenAI(api_key=OPENAI_API_KEY_SULTAN)
+    
+    # Format dropoff points for the prompt
+    dropoff_text = "\n".join([f"- {point.get('reason', '')}" for point in dropoff_points])
+    
+    # Create the prompt with dropoff points
+    text_input = GEMINI_DESIGN_ITERATION_PROMPT.format(dropoff_points=dropoff_text)
+    
+    # Ensure image is in highest quality and preserve text
+    if image.mode != 'RGBA':
+        image = image.convert('RGBA')
+    
+    # Convert image to base64
+    buffered = BytesIO()
+    image.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue()).decode()
+    
+    # First, analyze the image using vision model
+    vision_messages = [
+        {
+            "role": "system",
+            "content": "You are a UX/UI design expert. Your task is to analyze and improve designs based on UX issues."
+        },
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": text_input
+                },
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/png;base64,{img_str}",
+                        "detail": "high"
+                    }
+                }
+            ]
+        }
+    ]
+    
+    # Get analysis from vision model
+    vision_response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=vision_messages,
+        max_tokens=4096
+    )
+    
+    if not vision_response.choices:
+        return None
+        
+    analysis = vision_response.choices[0].message.content
+    
+    # Now generate the improved image
+    image_prompt = f"""Based on this UX analysis: {analysis}
+    Generate an improved version of the design that addresses these UX issues while maintaining the original design's integrity.
+    Keep all existing text exactly as is, with the same font, size, and position.
+    Only modify elements that need improvement based on the UX issues.
+    Ensure all changes improve usability while maintaining visual consistency."""
+    
+    # Generate the improved image
+    response = client.responses.create(
+        model="gpt-4.1-mini",
+        input=image_prompt,
+        tools=[{"type": "image_generation"}],
+    )
+    
+    # Extract the generated image
+    image_data = [
+        output.result
+        for output in response.output
+        if output.type == "image_generation_call"
+    ]
+    
+    if image_data:
+        # Convert base64 to PIL Image
+        image_bytes = base64.b64decode(image_data[0])
+        generated_image = Image.open(BytesIO(image_bytes))
+        
+        # Ensure the generated image matches original dimensions
+        if generated_image.size != image.size:
+            generated_image = generated_image.resize(image.size, Image.Resampling.LANCZOS)
+        
+        # Save the generated image with maximum quality
+        output_path = "static/generated_images/generated_design.png"
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        generated_image.save(output_path, 'PNG', quality=100, optimize=False)
+        
+        return {
+            "text": analysis,
+            "image": generated_image
+        }
+    
+    return {
+        "text": analysis,
+        "image": None
+    }
 
 @csrf_exempt
 def generate_iteration(request):
@@ -204,6 +315,7 @@ def generate_iteration(request):
 
                 # Generate iteration using Gemini
                 response = generate_with_gemini(original_image, dropoff_points)
+                # response = generate_with_openai(original_image, dropoff_points)
                 
                 if response:
                     # Parse the text response as JSON
