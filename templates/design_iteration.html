@@ -685,7 +685,7 @@
                 </div>
                 <div class="card result-card">
                     <h3>Enhanced Design</h3>
-                    <img id="enhancedImage" class="result-image" src="" alt="Enhanced design">
+                    <div id="enhancedDesignContainer"></div>
                 </div>
             </div>
         </div>
@@ -866,19 +866,91 @@
 
                     if (response.status === 'success') {
                         // Display original image
-                        $('#originalImage').attr('src', 'data:image/png;base64,' + response.data.original_images[0].image);
+                        const originalImage = $('#originalImage');
+                        originalImage.attr('src', response.data.original_image.path);
                         
-                        // Display enhanced image
-                        $('#enhancedImage').attr('src', 'data:image/png;base64,' + response.data.improved_design.image);
-                        
-                        // Display improvements
-                        const $improvementsList = $('#improvementsList');
-                        $improvementsList.empty();
-                        response.data.improved_design.key_changes.forEach(change => {
-                            $improvementsList.append(`<li>${change}</li>`);
+                        // Wait for original image to load to get its dimensions
+                        originalImage.on('load', function() {
+                            const dimensions = response.data.improved_design.dimensions;
+                            const enhancedDesignContainer = document.getElementById('enhancedDesignContainer');
+                            
+                            if (response.data.improved_design.image_path) {
+                                // Display static image if provided
+                                const enhancedImage = $('<img/>', {
+                                    id: 'enhancedImage',
+                                    class: 'result-image',
+                                    src: response.data.improved_design.image_path,
+                                    alt: 'Enhanced design'
+                                });
+                                $(enhancedDesignContainer).empty().append(enhancedImage);
+
+                                // Ensure the static image scales correctly within the container
+                                enhancedImage.on('load', function() {
+                                     // Re-apply scaling if needed based on container size
+                                     // Currently relies on CSS for scaling, but could add JS scaling here if necessary
+                                });
+
+                            } else if (response.data.improved_design.html) {
+                                // Display enhanced HTML in iframe
+                                const enhancedFrame = $('<iframe/>', {
+                                     id: 'enhancedDesignFrame',
+                                     class: 'enhanced-design-frame',
+                                     sandbox: 'allow-same-origin allow-scripts allow-styles'
+                                });
+                                $(enhancedDesignContainer).empty().append(enhancedFrame);
+                                
+                                const frameDoc = enhancedFrame[0].contentDocument || enhancedFrame[0].contentWindow.document;
+                                frameDoc.open();
+                                
+                                // Add base styles and the generated HTML
+                                const baseStyles = `
+                                    <!DOCTYPE html>
+                                    <html>
+                                    <head>
+                                        <meta charset="UTF-8">
+                                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                                        <style>
+                                            * {
+                                                box-sizing: border-box;
+                                                margin: 0;
+                                                padding: 0;
+                                            }
+                                            body {
+                                                width: ${dimensions.width}px;
+                                                height: ${dimensions.height}px;
+                                                overflow: hidden;
+                                                position: relative;
+                                                background: white;
+                                            }
+                                        </style>
+                                    </head>
+                                    <body>
+                                        ${response.data.improved_design.html}
+                                    </body>
+                                    </html>
+                                `;
+                                frameDoc.write(baseStyles);
+                                frameDoc.close();
+
+                                // Scale the iframe content to fit the container while maintaining aspect ratio
+                                const container = document.getElementById('enhancedDesignContainer');
+                                const scale = Math.min(
+                                    container.clientWidth / dimensions.width,
+                                    container.clientHeight / dimensions.height
+                                );
+                                
+                                enhancedFrame[0].style.transform = `scale(${scale})`;
+                                enhancedFrame[0].style.transformOrigin = 'top left';
+                                enhancedFrame[0].style.width = dimensions.width + 'px';
+                                enhancedFrame[0].style.height = dimensions.height + 'px';
+                            } else {
+                                // Handle case where neither image_path nor html is provided
+                                $(enhancedDesignContainer).empty().html('<p>No enhanced design data received.</p>');
+                            }
+
+                            $resultContainer.show();
                         });
 
-                        $resultContainer.show();
                     } else {
                         throw new Error(response.message || 'Failed to generate iteration');
                     }

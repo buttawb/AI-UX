@@ -941,11 +941,8 @@
                     const textHeight = 80;
                     const y = height - padding - textHeight;
                     
-                    // Draw gradient background
-                    const gradient = ctx.createLinearGradient(0, y, 0, height);
-                    gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
-                    gradient.addColorStop(1, 'rgba(0, 0, 0, 0.8)');
-                    ctx.fillStyle = gradient;
+                    // Draw semi-transparent black background for better text visibility
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
                     ctx.fillRect(0, y, width, textHeight + padding);
 
                     // Draw action text with animation
@@ -953,22 +950,31 @@
                     ctx.font = 'bold 32px Inter, sans-serif';
                     ctx.textAlign = 'center';
                     
-                    // Split text into lines
+                    // Calculate maximum width for text (80% of frame width)
+                    const maxTextWidth = width * 0.8;
+                    
+                    // Split text into lines with better width utilization
                     const words = text.split(' ');
                     const lines = [];
-                    let currentLine = words[0];
+                    let currentLine = '';
                     
-                    for (let i = 1; i < words.length; i++) {
+                    for (let i = 0; i < words.length; i++) {
                         const word = words[i];
-                        const width = ctx.measureText(currentLine + " " + word).width;
-                        if (width < width - 100) {
-                            currentLine += " " + word;
+                        const testLine = currentLine ? `${currentLine} ${word}` : word;
+                        const testWidth = ctx.measureText(testLine).width;
+                        
+                        if (testWidth <= maxTextWidth) {
+                            currentLine = testLine;
                         } else {
-                            lines.push(currentLine);
+                            if (currentLine) {
+                                lines.push(currentLine);
+                            }
                             currentLine = word;
                         }
                     }
-                    lines.push(currentLine);
+                    if (currentLine) {
+                        lines.push(currentLine);
+                    }
 
                     // Draw each line with animation
                     lines.forEach((line, index) => {
