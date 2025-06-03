@@ -9,7 +9,7 @@
 
 AI-UX Tester is an intelligent, modular platform designed to empower designers and product teams with **real-time, data-driven UX insights** and **automated design iteration** workflows. It bridges the gap between static designs and real user behavior by leveraging cutting-edge AI models and Figma integration.
 
-Built over 3 intense days for a hackathon, AI-UX Tester consists of **three powerful modules**:
+Built over **3 intense days for a hackathon**, AI-UX Tester consists of **three powerful modules**:
 
 
 | Module           | Key Capabilities                                                                                          |
