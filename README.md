@@ -79,7 +79,7 @@ pip install -r requirements.txt
 
 # Add your API keys and tokens in ai-ux views
 OPENAI_API_KEY="your_openai_key"
-FIGMA_ACCESS_TOKEN="your_figma_token"
+GEMINI_API_KEY="your_gemini_key"
 
 # Run the server
 python manage.py migrate
