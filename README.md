@@ -100,7 +100,7 @@ python manage.py runserver
 
 ---
 
-## ⚡ Future Roadmap (Coming Soon)
+## ⚡ Future Roadmap
 
 * Real-time collaborative UX design and feedback
 * Persona-specific UX simulations (seniors, color-blind users, etc.)
