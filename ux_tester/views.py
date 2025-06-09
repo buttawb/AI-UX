@@ -3,16 +3,10 @@ import requests
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from .gemini_keys import AVIALDO_GEMINI_KEY, GLOBAL_SEARCH_API_KEY  # Ensure you have this file with your API key
+# Ensure you have this file with your API key
+from .gemini_keys import GLOBAL_SEARCH_API_KEY, OPENAI_API_KEY_SULTAN
 import re
-import os
-import tempfile
-from django.core.files.storage import default_storage
-from django.core.files.base import ContentFile
-import time
-import base64
 from google import genai
-from google.genai import types
 
 # Default Figma file ID (will be overridden by user input)
 DEFAULT_FIGMA_FILE_ID = 'dl5VgCWMZwL3uRi9mIOMvX'
@@ -24,9 +18,6 @@ FIGMA_TOKENS = {
     'farzam_token': 'figd_iVOxEWPrSYY0MFIOD06Btza3Z2ofcJvaPENMSNSB'
 }
 
-OPENAI_API_KEY = "sk-proj-TqTaxIMCk6fsrNcaGXE1yF-PehXerkG-e4EJaqGft33i13RlRJq_xRmiV_lGQUHdpQO3 5kxXhaT3BlbkFJ1xfcvTfnnPxsuNGzvhLdYBU25sc-VgK4QA7IhR0KdBWkqiijTRGjbsp1-zqKJnObr6lkftWyUA"
-OPENAI_API_KEY_SULTAN="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"
-TEMP_TOKEN = "328267-66c5803b-80d4-4989-ad6f-8430d60fb714"
 
 # Base prompt template that will be used for both OpenAI and Gemini
 BASE_PROMPT_TEMPLATE = """
@@ -147,11 +138,13 @@ Here is the Figma design data:
 {figma_data}
 """
 
+
 def landing_page(request):
     """
     View function for the landing page.
     """
     return render(request, 'index.html')
+
 
 @csrf_exempt
 def upload_design(request):
@@ -161,6 +154,7 @@ def upload_design(request):
     context = {'figma_file_id': DEFAULT_FIGMA_FILE_ID}
     return render(request, 'upload.html', context)
 
+
 @csrf_exempt
 def fetch_figma_file(request):
     """
@@ -168,14 +162,14 @@ def fetch_figma_file(request):
     """
     file_id = request.GET.get('file_id', DEFAULT_FIGMA_FILE_ID)
     access_token = request.GET.get('access_token')
-    
+
     if not access_token:
         return JsonResponse({"error": "No access token provided"}, status=400)
-    
+
     # Get the actual token value if it's a predefined token
     if access_token in FIGMA_TOKENS:
         access_token = FIGMA_TOKENS[access_token]
-    
+
     # url = "https://api.figma.com/v1/me"
     headers = {"X-Figma-Token": access_token}
 
@@ -189,6 +183,7 @@ def fetch_figma_file(request):
     if response.status_code == 200:
         return JsonResponse(response.json())
     return JsonResponse({"error": "Failed to fetch Figma file."}, status=400)
+
 
 @csrf_exempt
 def generate_heatmap(request):
@@ -209,6 +204,7 @@ def generate_heatmap(request):
         return JsonResponse({'heatmap_data': heatmap_data})
 
     return JsonResponse({'error': 'Invalid request method.'}, status=405)
+
 
 @csrf_exempt
 def call_openai_heatmap(figma_data, user_prompt=''):
@@ -249,7 +245,8 @@ def call_openai_heatmap(figma_data, user_prompt=''):
         "temperature": 0.7,
     }
 
-    response = requests.post("https://api.openai.com/v1/chat/completions", json=openai_payload, headers=headers)
+    response = requests.post(
+        "https://api.openai.com/v1/chat/completions", json=openai_payload, headers=headers)
     response.raise_for_status()
     result = response.json()
 
@@ -258,6 +255,7 @@ def call_openai_heatmap(figma_data, user_prompt=''):
 
     heatmap_report = extract_json_from_model_response(content)
     return heatmap_report
+
 
 @csrf_exempt
 def call_gemini_heatmap(figma_data, user_prompt=''):
@@ -308,7 +306,7 @@ def call_gemini_heatmap(figma_data, user_prompt=''):
 
     last_error = None
     client = genai.Client(api_key=GLOBAL_SEARCH_API_KEY)
-    
+
     for model_name in model_names:
         try:
             print(f"Attempting with model: {model_name}")
@@ -320,64 +318,77 @@ def call_gemini_heatmap(figma_data, user_prompt=''):
                     "parts": [{"text": prompt}]
                 }],
             )
-            
+
             if response.candidates:
                 content_data = response.candidates[0].content
                 if not content_data or not content_data.parts:
                     continue
-                    
+
                 parts = content_data.parts
                 if not parts[0].text:
                     continue
-                    
+
                 content = parts[0].text
                 heatmap_report = extract_json_from_model_response(content)
-                
+
                 if "analysis_data" in heatmap_report:
-                    unexpected_frames = set(heatmap_report["analysis_data"].keys()) - set(frame_data.keys())
+                    unexpected_frames = set(
+                        heatmap_report["analysis_data"].keys()) - set(frame_data.keys())
                     if unexpected_frames:
-                        print(f"Warning: Response contains unexpected frame IDs: {unexpected_frames}")
+                        print(
+                            f"Warning: Response contains unexpected frame IDs: {unexpected_frames}")
                         heatmap_report["analysis_data"] = {
-                            k: v for k, v in heatmap_report["analysis_data"].items() 
+                            k: v for k, v in heatmap_report["analysis_data"].items()
                             if k in frame_data.keys()
                         }
-                
+
                 return heatmap_report
-                
+
         except Exception as e:
             last_error = e
             print(f"Error with model {model_name}: {str(e)}")
             continue
-    
-    if last_error:
-        raise Exception(f"All Gemini models failed. Last error: {str(last_error)}")
-    raise Exception("All Gemini models failed without specific error information")
 
-def extract_json_from_model_response(content): # Renamed from extract_json_from_openai
+    if last_error:
+        raise Exception(
+            f"All Gemini models failed. Last error: {str(last_error)}")
+    raise Exception(
+        "All Gemini models failed without specific error information")
+
+
+# Renamed from extract_json_from_openai
+def extract_json_from_model_response(content):
     """
     Extracts JSON object from a model's text response that might include markdown code fences.
     """
     # Remove triple backticks or any markdown code fences (json, etc.)
-    cleaned = re.sub(r"```(?:json)?|```", "", content, flags=re.IGNORECASE).strip()
-    
+    cleaned = re.sub(r"```(?:json)?|```", "", content,
+                     flags=re.IGNORECASE).strip()
+
     try:
         return json.loads(cleaned)
     except json.JSONDecodeError as e_direct:
         # Try to find first JSON object substring if direct parsing fails
         # This regex looks for content starting with { and ending with }
-        json_match = re.search(r"\{[^{}]*(((?<Core>{[^{}]*})|(?<-Core>[^{}]*)|[^{}Core])*)\}", cleaned, re.DOTALL)
+        json_match = re.search(
+            r"\{[^{}]*(((?<Core>{[^{}]*})|(?<-Core>[^{}]*)|[^{}Core])*)\}", cleaned, re.DOTALL)
 
         if json_match:
             try:
-                return json.loads(json_match.group(0)) # Use group(0) for the entire match
+                # Use group(0) for the entire match
+                return json.loads(json_match.group(0))
             except json.JSONDecodeError as e_match:
                 print(f"Failed to parse extracted JSON: {e_match}")
-                print(f"Content that failed parsing after regex: '{json_match.group(0)}'")
-                raise Exception(f"Could not decode JSON from model response even after regex extraction. Original error: {e_direct}, Regex error: {e_match}, Content: '{cleaned}'")
+                print(
+                    f"Content that failed parsing after regex: '{json_match.group(0)}'")
+                raise Exception(
+                    f"Could not decode JSON from model response even after regex extraction. Original error: {e_direct}, Regex error: {e_match}, Content: '{cleaned}'")
         else:
             print(f"Direct JSON parsing failed: {e_direct}")
             print(f"No JSON object found with regex in content: '{cleaned}'")
-            raise Exception(f"Could not decode JSON from model response and no JSON object found via regex. Original error: {e_direct}, Content: '{cleaned}'")
+            raise Exception(
+                f"Could not decode JSON from model response and no JSON object found via regex. Original error: {e_direct}, Content: '{cleaned}'")
+
 
 @csrf_exempt
 def fetch_figma_image_urls(request):
@@ -392,14 +403,14 @@ def fetch_figma_image_urls(request):
         node_ids = data.get('node_ids')
         file_id = data.get('file_id', DEFAULT_FIGMA_FILE_ID)
         access_token = data.get('access_token')
-        
+
         if not access_token:
             return JsonResponse({"error": "No access token provided"}, status=400)
-            
+
         # Get the actual token value if it's a predefined token
         if access_token in FIGMA_TOKENS:
             access_token = FIGMA_TOKENS[access_token]
-        
+
         if not node_ids or not isinstance(node_ids, list):
             return JsonResponse({"error": "Invalid or missing 'node_ids' list."}, status=400)
     except json.JSONDecodeError:
@@ -412,11 +423,11 @@ def fetch_figma_image_urls(request):
     try:
         response = requests.get(url, headers=headers, timeout=60)
         response.raise_for_status()
-        
+
         data = response.json()
         if data.get("err"):
             return JsonResponse({"error": f"Figma API error: {data['err']}"}, status=400)
-        
+
         return JsonResponse({"image_urls": data.get("images", {})})
 
     except requests.RequestException as e:
